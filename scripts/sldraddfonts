@@ -1,0 +1,109 @@
+#!/usr/bin/python3
+
+from langtag import lookup  # , langtag
+from palaso.sldr.ldml import Ldml, iterate_files
+import cssutils
+import csv
+import os
+import os.path
+import argparse
+
+suggestions = dict()
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Populate font information to LDML files')
+    parser.add_argument("sldr", help="root of SLDR tree to write into")
+    parser.add_argument('datafile', help='CSV file export from Google Sheet document Script2Font')
+    parser.add_argument('--stylesheet', help='CSS stylesheet with user settable font features')
+    parser.add_argument('--version', action='version', version='%(prog)s: 0.1')
+    args = parser.parse_args()
+
+    read_font_data(args.datafile)
+    if args.stylesheet:
+        read_feature_data(args.stylesheet)
+    write_font_data(args.sldr)
+
+
+def read_font_data(data_file_name):
+    """Read CSV data file"""
+    font_sources = ('WSTech primary', 'NLCI', 'Microsoft', 'Other', 'Noto Sans', 'Noto Serif', 'WSTech secondary')
+    with open(data_file_name, 'r', newline='') as data_file:
+        reader = csv.DictReader(data_file)
+        for row in reader:
+            # Construct font tag
+            script = row['Code']
+            ft = script
+            for region in row['Region'].split(', '):
+                if region != '':
+                    ft = script + '-' + region
+
+                # Assemble list of fonts for the font tag
+                fonts = list()
+                for font_source in font_sources:
+                    font = row[font_source]
+                    if font:
+                        if ',' in font:
+                            for multiple_font in font.split(', '):
+                                fonts.append(multiple_font)
+                        else:
+                            fonts.append(font)
+                if len(fonts) > 0:
+                    suggestions[ft] = fonts
+
+
+def read_feature_data(stylesheet_file_name):
+    """Read CSS stylesheet for user font features"""
+    sheet = cssutils.parseFile(stylesheet_file_name)
+    for rule in sheet:
+        if rule.type == rule.STYLE_RULE:
+            lang = rule.selectorText[len(':lang('):-1]
+            print(lang)
+            for prop in rule.style:
+                print(prop.name)
+                print(prop.value + '\n')
+
+
+def find_fonts(locale):
+    """Return a list of preferred fonts"""
+
+    # Find script and possibly region
+    region = None
+    try:
+        ts = lookup(locale, matchRegions=True, use639=True)
+        script = ts.script
+        region = ts.region
+    except KeyError:
+        print(f'Cannot find locale {locale}, using fallback')
+        return ['Charis SIL']
+
+    # Find font
+    ft = script
+    if region:
+        ft = script + '-' + region
+    if ft in suggestions:
+        return suggestions[ft]
+    elif script in suggestions:
+        return suggestions[script]
+    return ['Charis SIL']
+
+
+def write_font_data(sldrtree):
+    """Write preferred font information to SLDR"""
+    for filepath in iterate_files(sldrtree):
+        # Find preferred font
+        locale = os.path.splitext(os.path.basename(filepath))[0].replace('_', '-')
+        preferred_fonts = find_fonts(locale)
+
+        # Write preferred  font to LDML file
+        default = '[@types="default"]'
+        for preferred_font in preferred_fonts:
+            ldml = Ldml(filepath)
+            resource = ldml.ensure_path(f'special/sil:external-resources/sil:font[@name="{preferred_font}"]{default}/sil:url')[0]
+            resource.text = 'https://wirl.api.sil.org/' + preferred_font.replace(' ', '')
+            ldml.save_as(filepath, topns=True)
+            default = ''  # only the first font is the default font
+
+
+if __name__ == '__main__':
+    main()
