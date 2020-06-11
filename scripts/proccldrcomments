@@ -2,7 +2,7 @@
 
 import argparse, sys, re
 from xml.etree import ElementTree as et
-from palaso.sldr.py3xmlparser import XMLParser, TreeBuilder
+from sldr.py3xmlparser import XMLParser, TreeBuilder
 
 try:
     basestring

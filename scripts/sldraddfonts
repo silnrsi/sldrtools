@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from langtag import lookup  # , langtag
-from palaso.sldr.ldml import Ldml, iterate_files
+from sldr.ldml import Ldml, iterate_files
 import cssutils
 import csv
 import os

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from palaso.sldr.ldml import Ldml
+from sldr.ldml import Ldml
 import os
 
 try:
