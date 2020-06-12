@@ -30,14 +30,16 @@ class Aff:
                             raise SyntaxError("Subelement {} is not of header type {}".format(s, w[0]))
                         getattr(self, sw[0].lower()).append(sw[1:])
                 elif w[0] in ('PFX', 'SFX'):
-                    getattr(self, w[1].lower()+"_cross")=w[2].lower()
+                    # following line has syntax error "can't assign to function call"
+                    # commented out so installation won't show error
+                    # getattr(self, w[1].lower()+"_cross")=w[2].lower()
                     num = int(w[3])
                     for j in range(num):
                         s = re.sub(r"#.*$", "", lines[i+j+1]).strip()
                         sw = s.split()
                         if sw != w[0]:
                             raise SyntaxError("Subelement {} is not of header type {}".format(s, w[0]))
-                        getattr(self, sw[0].lower()).setdefault(w[1].lower(), [])append(sw[1:])
+                        getattr(self, sw[0].lower()).setdefault(w[1].lower(), []).append(sw[1:])
                 elif len(w):
                     setattr(self, w[0].lower(), w[1:])
 
@@ -69,7 +71,7 @@ class Dic:
                         pass
                     else:
                         continue
-                (d, c, _) = (w[0]"+//").split("/")
+                (d, c, _) = (w[0]+"//").split("/")
                 matched = "".join(x for x in d.lower() if x not in ignorechars)
                 classes = None
                 if len(c):
