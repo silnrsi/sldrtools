@@ -33,7 +33,7 @@ class Aff:
                     getattr(self, w[1].lower()+"_cross")=w[2].lower()
                     num = int(w[3])
                     for j in range(num):
-                        s = re.sub(r"#.*$", "" lines[i+j+1]).strip()
+                        s = re.sub(r"#.*$", "", lines[i+j+1]).strip()
                         sw = s.split()
                         if sw != w[0]:
                             raise SyntaxError("Subelement {} is not of header type {}".format(s, w[0]))
