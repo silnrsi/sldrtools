@@ -129,6 +129,9 @@ class LangTag(object) :
             self.script = bits[curr].title()
             curr += 1
             self.hideboth = False
+        elif len(bits[curr]) == 3 and bits[curr][0] not in "0123456789":
+            self.lang += "-" + bits[curr]
+            curr += 1
         if curr >= len(bits) : return
         if 1 < len(bits[curr]) < 4 :
             self.region = bits[curr].upper()
@@ -363,7 +366,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                     currlang = None
                     tag = None
                 elif l.startswith("Subtag: ") :
-                    if mode == "language" :
+                    if mode in ("language", "extlang", "grandfathered", "redundant") :
                         currlang = l[8:]
                         tag = LangTag(lang=currlang)
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
@@ -372,10 +375,14 @@ class LangTags(with_metaclass(Singleton, dict)):
                     tag.suppress = True
                 elif l.startswith("Deprecated: ") and tag is not None:
                     tag.deprecated = True
+                elif l.startswith("Preferred-Value: ") and tag is not None:
+                    tag.preferred = l[17:]
                 elif l.startswith("Description: ") and tag is not None:
                     if not hasattr(tag, 'desc'):
                         tag.desc = []
                     tag.desc.append(l[13:].strip())
+                elif l.startswith("Prefix: ") and mode == "extlang" and tag is not None:
+                    tag.lang = l[8:] + "-" + tag.lang
             if currlang is not None:
                 self.add(tag)
 

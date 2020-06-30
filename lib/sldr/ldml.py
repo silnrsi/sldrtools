@@ -631,7 +631,7 @@ class Ldml(ETWriter):
             attrs = {}
             for p in parts:
                 if not len(p): continue
-                (k, v) = re.split(r'\s*=\s*', p)
+                (k, v) = re.split(r'\s*=\s*', p, maxsplit=1)
                 if k.startswith("@") and v[0] in '"\'':
                     attrs[self._reverselocalns(k[1:])] = v[1:-1]
             steps.append((tag, attrs))
