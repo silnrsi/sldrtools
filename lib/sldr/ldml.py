@@ -264,6 +264,13 @@ class Ldml(ETWriter):
     use_draft = None
     nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
     keyContexts = {}            # cls.keyContexts[element] = set(attributes)
+    typeSortKeys = {"sun": 0, "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6,
+                    "midnight": 0, "am": 2, "noon": 3, "pm": 4,
+                        "morning1": 11, "afternoon1": 15, "evening1": 16, "night1": 17,
+                        "morning2": 21, "afternoon2": 25, "evening2": 26, "night2": 27,
+                    "one": 1, "two": 2, "many": 3, "other": 4,
+                    "start": -1, "middle": 0, "end": 1,     # so that 2 comes after end
+                   }
 
     @classmethod
     def ReadMetadata(cls, fname = None):
@@ -697,6 +704,18 @@ class Ldml(ETWriter):
         else:
             return []
 
+    def _typeSortKey(self, k):
+        if k in self.typeSortKeys:
+            return "{:03}".format(self.typeSortKeys[k])
+        else:
+            try:
+                return "{:03}".format(int(k))
+            except TypeError:
+                pass
+            except ValueError:
+                pass
+        return k
+
     def normalise(self, base=None, addguids=True, usedrafts=False):
         """ Normalise according to LDML rules"""
         _digits = set('0123456789.')
@@ -715,6 +734,8 @@ class Ldml(ETWriter):
                 for k, a in ((l, x.get(l)) for l in xl):
                     if k == 'id' and all(q in _digits for q in a):
                         res += (k, float(a))
+                    elif k == 'type':
+                        res += (k, self._typeSortKey(a))
                     else:
                         res += (k, a)
                 return res

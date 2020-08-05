@@ -336,6 +336,7 @@ class LangTags(with_metaclass(Singleton, dict)):
             if base.script is None: to.hidescript = True
             if base.region is None: to.hideregion = True
             to.hideboth = base.hideboth
+            to.isCldr = True
             self.add(to)
 
     def readExtras(self, ef) :
