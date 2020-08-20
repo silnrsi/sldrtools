@@ -68,6 +68,30 @@ _elementprotect = {
 _attribprotect = dict(_elementprotect)
 _attribprotect['"'] = '&quot;'
 
+_basenamespaces = {
+    'urn://www.sil.org/ldml/0.1':           'sil',
+    'http://www.w3.org/XML/1998/namespace': 'xml'}
+
+def reverse_localns(tag, ns=_basenamespaces):
+    ''' Convert ns:tag -> {url}:tag '''
+    nsi = tag.find(":")
+    if nsi > 0:
+        nst = tag[:nsi]
+        for k, v in ns.items():
+            if nst == v:
+                tag = "{" + k + "}" + tag[nsi+1:]
+                break
+    return tag
+
+def localns(tag, ns=_basenamespaces):
+    ''' Convert {url}localname into ns:localname'''
+    if tag[0] == '{':
+        nst, localname = tag[1:].split('}', 1)
+        qname = ns.get(nst, '')
+        if qname:
+            return "{}:{}".format(qname, localname)
+    return tag
+
 class ETWriter(object):
     """ General purpose ElementTree pretty printer complete with options for attribute order
         beyond simple sorting, and which elements should use cdata """
@@ -335,8 +359,9 @@ class Ldml(ETWriter):
         def procmodel(name, nodes, cls, elementCount):
             for n in nodes:
                 if n[2] is not None:
+                    tag = reverse_localns(n[2])
                     elementCount += 1
-                    cls.elementOrder.setdefault(name, {})[n[2]] = elementCount
+                    cls.elementOrder.setdefault(name, {})[tag] = elementCount
                 if len(n[3]):
                     elementCount = procmodel(name, n[3], cls, elementCount)
             return elementCount
@@ -345,6 +370,7 @@ class Ldml(ETWriter):
             #          1: (NONE=0, OPT, REP, PLUS), 
             #          2: name,
             #          3: children
+            name = reverse_localns(name)
             elementCount = procmodel(name, model[3], cls, 0)
             cls.maxEls = max(cls.maxEls, elementCount + 1)
             cls.attributeOrder[name] = {}
@@ -352,6 +378,8 @@ class Ldml(ETWriter):
             curAttrib = None
             curEl = name
         def attlistDecl(elname, attname, xmltype, default, required):
+            attname = reverse_localns(attname)
+            elname = reverse_localns(elname)
             attribCount[elname] += 1
             cls.attributeOrder[elname][attname] = attribCount[elname]
             cls.keyContexts.setdefault(elname, set()).add(attname)

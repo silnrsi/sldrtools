@@ -289,6 +289,8 @@ class LangTags(with_metaclass(Singleton, dict)):
 
     def __init__(self, extrasfile=None, noalltags=False, alltags=None):
         super(LangTags, self).__init__()
+        self.variants = {}
+        self.global_variants = []
         if noalltags or not self.readAlltags(alltags):
             self.readIana()
             self.readLikelySubtags()
@@ -361,15 +363,21 @@ class LangTags(with_metaclass(Singleton, dict)):
             for l in f.readlines() :
                 l = l.strip()
                 if l.startswith("Type: ") :
+                    if mode == "variant":
+                        if not hasprefix:
+                            self.global_variants.append(currlang)
+                        hasprefix = False
+                        currlang = None
                     mode = l[6:]
                     if currlang is not None:
                         self.add(tag)
                     currlang = None
                     tag = None
                 elif l.startswith("Subtag: ") :
-                    if mode in ("language", "extlang", "grandfathered", "redundant") :
+                    if mode in ("language", "extlang", "grandfathered", "redundant", "variant") :
                         currlang = l[8:]
-                        tag = LangTag(lang=currlang)
+                        if mode != "variant":
+                            tag = LangTag(lang=currlang)
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
                     tag.script = l[17:]
                     tag.hidescript = True
@@ -378,6 +386,9 @@ class LangTags(with_metaclass(Singleton, dict)):
                     tag.deprecated = True
                 elif l.startswith("Preferred-Value: ") and tag is not None:
                     tag.preferred = l[17:]
+                elif mode == "variant" and l.startswith("Prefix: ") and currlang is not None:
+                    self.variants.setdefault(l[8:].strip(), []).append(currlang)
+                    hasprefix = True
                 elif l.startswith("Description: ") and tag is not None:
                     if not hasattr(tag, 'desc'):
                         tag.desc = []
