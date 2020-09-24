@@ -50,4 +50,4 @@ to create an .ods file with the data from the existing LDML file filled in.
 - From the command line: python sheetldml.py -o LDML_entry_xyz-Latn.ods LDML_entry.ods xyz.ldml
 
 (where LDML_entry.ods is the blank template file, xyz.ldml is the existing LDML file 
-and LDML_entry_xyz-Latn.ods is the spreadsheet initialized from the LDML file.
+and LDML_entry_xyz-Latn.ods is the spreadsheet initialized from the LDML file).
