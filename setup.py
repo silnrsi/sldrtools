@@ -21,6 +21,7 @@ setup(name='sldr',
       package_dir={'': 'lib'},
       package_data={'sldr': ['allkeys.txt',
                              'language-subtag-registry.txt',
+                             'likelySubtags.xml',
                              'sil.dtd',
                              'supplementalData.xml',
                              'supplementalMetadata.xml']}

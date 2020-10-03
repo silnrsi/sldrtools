@@ -305,7 +305,7 @@ class LangTags(with_metaclass(Singleton, dict)):
             fname = [os.path.join(os.path.dirname(__file__), 'langtags.txt')]
         for p in fname:
             try:
-                with open(p) as fh:
+                with open(p, encoding="utf-8") as fh:
                     for l in fh.readlines():
                         tags = [x[1:] if x.startswith("*") else x for x in l.strip().split() if x != "="]
                         temp = {}
@@ -342,7 +342,7 @@ class LangTags(with_metaclass(Singleton, dict)):
             self.add(to)
 
     def readExtras(self, ef) :
-        with open(ef) as csvfile :
+        with open(ef, encoding="utf-8") as csvfile :
             reader = csv.DictReader(csvfile, delimiter="\t")
             for row in reader :
                 if row['confirmed'] == 'CLDR' : continue
@@ -356,7 +356,7 @@ class LangTags(with_metaclass(Singleton, dict)):
         """Reads the iana registry, particularly the suppress script info"""
         if fname is None :
             fname = os.path.join(os.path.dirname(__file__), "language-subtag-registry.txt")
-        with open(fname) as f :
+        with open(fname, encoding="utf-8") as f :
             currlang = None
             mode = None
             deprecated = False
