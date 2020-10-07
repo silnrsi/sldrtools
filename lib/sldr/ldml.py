@@ -762,6 +762,8 @@ class Ldml(ETWriter):
                 for k, a in ((l, x.get(l)) for l in xl):
                     if k == 'id' and all(q in _digits for q in a):
                         res += (k, float(a))
+                    elif k == 'id':
+                        res += (k, a.lower())
                     elif k == 'type':
                         res += (k, self._typeSortKey(a))
                     else:
