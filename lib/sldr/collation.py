@@ -9,9 +9,8 @@ from math import log10
 from itertools import groupby
 from difflib import SequenceMatcher
 
-def escape(s):
+def escape(s, allchars=False):
     '''Turn normal Unicode into escaped tailoring syntax'''
-    return s
     res = ""
     escs = ['\\&[]/<']
     lastbase = False
@@ -19,22 +18,28 @@ def escape(s):
         if k in escs:
             res += u"\\" + k
             continue
+        elif k == "'":
+            res += k + k
+            continue
         i = ord(k)
         if 32 < i < 127:
             res += k
         elif lastbase or not ud.category(k).startswith("M"):
             lastbase = True
             res += k
-        elif i > 0xFFFF:
+        elif allchars and i > 0xFFFF:
             res += u'\\U' + ("00000000" + (hex(i)[2:]))[-8:]
-        else:
+        elif allchars:
             res += u'\\u' + ("0000" + (hex(i)[2:]))[-4:]
+        else:
+            res += k
     return res
 
 def unescape(s):
     '''Parse tailoring escaped characters into normal Unicode'''
     s = re.sub(r'(?:\\U([0-9A-F]{8})|\\u([0-9A-F]{4}))', lambda m:unichr(int(m.group(m.lastindex), 16)), s, re.I)
     s = re.sub(r'\\(.)', r'\1', s)
+    s = s.replace("''", "'")
     return s
 
 def ducetSortKey(d, k, extra=None):
@@ -98,9 +103,9 @@ def readDucet(path="") :
         with open(ducetpath, 'r') as f :
             for contentLine in f.readlines():
                 parts = contentLine.split(';')
-                if len(parts) != 2:
+                if len(parts) != 2 or parts[0].strip().startswith("@"):
                     continue
-                key = u"".join(unichr(int(x, 16)) for x in keyre.findall(parts[0]))
+                key = u"".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
                 vals = valre.findall(parts[1])
                 result[key] = tuple(tuple(int(x, 16) for x in v) for v in vals)
     except :
@@ -174,7 +179,6 @@ class Collation(dict):
             if v.prefix:
                 res += v.prefix
             if v.base != lastk and v.base != eqchain:
-#            if v.base != lastk:
                 loc = len(res) + 1
                 res += "\n&" + escape(v.base)
                 eqchain = None
