@@ -12,7 +12,7 @@ from difflib import SequenceMatcher
 def escape(s, allchars=False):
     '''Turn normal Unicode into escaped tailoring syntax'''
     res = ""
-    escs = ['\\&[]/<']
+    escs = '!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~'
     lastbase = False
     for k in s:
         if k in escs:
