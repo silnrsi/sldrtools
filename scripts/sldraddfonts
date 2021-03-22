@@ -216,14 +216,14 @@ def build_url_from_fontname(fontname):
 
     # Noto fonts
     googlefonts = 'https://github.com/googlefonts/'
-    noto_repo = f'{googlefonts}noto-fonts/raw/master/'
-    noto_cjk_repo = f'{googlefonts}noto-cjk/raw/master/'
+    noto_repo = f'{googlefonts}noto-fonts/raw/main/'
+    noto_cjk_repo = f'{googlefonts}noto-cjk/raw/main/'
     if pathname.startswith('Noto'):
-        url = f'{noto_repo}phaseIII_only/hinted/ttf/{pathname}/{pathname}-Regular.ttf'
+        url = f'{noto_repo}hinted/ttf/{pathname}/{pathname}-Regular.ttf'
         if pathname.endswith(('JP', 'KR', 'SC', 'TC')):
             url = f'{noto_cjk_repo}{pathname}-Regular.otf'
         elif pathname == 'NotoSansTibetan':
-            url = f'{noto_repo}hinted/{pathname}/{pathname}-Regular.ttf'
+            url = f'{noto_repo}archive/hinted/{pathname}/{pathname}-Regular.ttf'
         return [url]
 
     # Default to WIRL records
