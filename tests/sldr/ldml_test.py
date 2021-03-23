@@ -101,6 +101,18 @@ class LDMLTests(unittest.TestCase):
         n = self.ldml.ensure_path('identity/special/jim[@name="test"][@other="not"]')[0]
         self.assertTrue(n.get('name',"") == "test" and n.get('other',"") == "not")
 
+    def test_fontname(self):
+        """ The second call with the same font name should not create a new item """
+        b = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
+        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
+        self.assertTrue(id(b) == id(n))
+
+    def test_fontname_features(self):
+        """ The second call with the same font name should merge the new feature information to the existing item """
+        b = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
+        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@features="cv43=2"][@types="default"]')[0]
+        self.assertTrue(id(b) == id(n))
+
     def test_output(self):
         res = StringIO()
         self.ldml.serialize_xml(res.write)
