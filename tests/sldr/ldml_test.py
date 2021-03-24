@@ -104,13 +104,16 @@ class LDMLTests(unittest.TestCase):
     def test_fontname(self):
         """ The second call with the same font name should not create a new item """
         b = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
-        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
+        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"]')[0]
+        n.set('types', 'default')
         self.assertTrue(id(b) == id(n))
 
     def test_fontname_features(self):
         """ The second call with the same font name should merge the new feature information to the existing item """
         b = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@types="default"]')[0]
-        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"][@features="cv43=2"][@types="default"]')[0]
+        n = self.ldml.ensure_path('special/sil:external-resources/sil:font[@name="Charis SIL"]')[0]
+        n.set('types', 'default')
+        n.set('features', 'cv43=2')
         self.assertTrue(id(b) == id(n))
 
     def test_output(self):

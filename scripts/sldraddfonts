@@ -322,16 +322,20 @@ def write_font_data(sldrtree):
         features = ''
         if xml_locale in css2features:
             features_list = css2features[xml_locale]
-            features_str = ' '.join(features_list)
-            features = f'[@features="{features_str}"]'
+            features = ' '.join(features_list)
             message += ' ' + features
         print(f'{xml_locale}:{filepath}:{message}')
 
         # Write preferred font to LDML file
-        default = '[@types="default"]'
+        default = 'default'
         for preferred_font in preferred_fonts:
             ldml = Ldml(filepath)
-            resource_path = f'special/sil:external-resources/sil:font[@name="{preferred_font}"]{features}{default}'
+            resource_path = f'special/sil:external-resources/sil:font[@name="{preferred_font}"]'
+            resource = ldml.ensure_path(resource_path)[0]
+            if features != '':
+                resource.set('features', features)
+            if default != '':
+                resource.set('types', default)
             url = find_url_from_fontname(preferred_font)
             if url != '':
                 resource_path += '/sil:url'
