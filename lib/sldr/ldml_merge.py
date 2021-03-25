@@ -175,7 +175,7 @@ class LdmlMerge(Ldml):
                     t.mergeBase = bdict.pop(t.attrHash)
                     if t.mergeBase is not None: del blist[t.mergeBase.contentHash]
         for e in olist.values():       # pick up stuff in other but not in this
-            newe = self.copynode(e, this.parent)
+            newe = self._copynode(e, this.parent)
             if base is not None and e.contentHash in blist:
                 newe.mergeBase = blist.pop(e.contentHash)
             elif base is not None:
@@ -299,7 +299,7 @@ class LdmlMerge(Ldml):
                         this.append(t.mergeOther)
                         res = True
                 elif t.mergeBase.contentHash != t.mergeOther.contentHash:
-                    res |= self.merge(t.mergeOther, t.mergeBase, t)        # could be a clash so recurse
+                    res |= self.merge(t.mergeOther, t.mergeBase, t, default=default)        # could be a clash so recurse
                 elif self.useDrafts:       # base == other
                     res |= self._merge_with_alts(t.mergeBase, t.mergeOther, t, default=default, copycomments=copycomments)
             elif t.mergeOther is None and t.mergeBase.contentHash == t.contentHash:

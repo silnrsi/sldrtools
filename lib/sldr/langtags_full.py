@@ -66,6 +66,14 @@ class LangTag(object) :
         self.hideextensions = None
         if tag is not None : self.parse(tag)
 
+    def copy(self):
+        res = type(self)(lang=self.lang, script=self.script, region=self.region,
+                            variants=self.variants, extensions=self.extensions)
+        res.hidescript = self.hidescript
+        res.hideregion = self.hideregion
+        res.hideboth = self.hideboth
+        return res
+
     def _extensions(self) :
         if self.extensions is None : return []
         res = []

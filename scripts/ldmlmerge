@@ -27,7 +27,7 @@
 import os, sys, codecs
 from argparse import ArgumentParser
 from subprocess import check_output
-from StringIO import StringIO
+from io import StringIO
 from xml.etree import ElementTree as et
 from datetime import datetime
 from sldr.ldml_merge import LdmlMerge, flattenlocale
@@ -49,9 +49,11 @@ parser.add_argument('-d','--dirs',action='append',help='Directory to search for 
 parser.add_argument('-g','--git',action='store_true',help='Automatically work out what to do inside a git repo using sil:identity/@revid')
 parser.add_argument('-c','--default',default='proposed',help="Default Change draft level")
 parser.add_argument('-C','--copycomments',help="Assumes this file has comments stripped rather than deleted, and uses either 'base' or 'other' as source of comments")
+parser.add_argument('-G','--nogeneration',action="store_true",help="Don't update the identity/generation element")
+parser.add_argument('-v','--verbose',action="store_true",help="Be verbose")
 args = parser.parse_args()
 
-this = Ldml(args.this)
+this = LdmlMerge(args.this)
 if args.dirs :
     this = flattenlocale(this, dirs=args.dirs, rev='f', fname=args.this)
 
@@ -77,15 +79,19 @@ else :
     if args.other :
         other = LdmlMerge(args.other)
 
-if this.merge(other, base, default=args.default, copycomments=args.copycomments) :
+if args.verbose:
+    print(f"{args=}")
+    print(f"{this.default_draft=} {base.default_draft=} {other.default_draft=}")
+if not args.nogeneration and this.merge(other, base, default=args.default, copycomments=args.copycomments) :
     # update the date
     idnode = this.find("./identity/generation")
     if idnode is None :
         i = this.find("./identity")
-        idnode = et.SubElement("generation", i)
+        idnode = i.makeelement("generation", {})
+        # idnode = et.SubElement(i, "generation")
     currdate = datetime.now()
     currdate.microsecond = 0
-    idnode.set("date","$Date: " + currdate.isoformat() + " $")
+    #idnode.set("date","$Date: " + currdate.isoformat() + " $")
 sys.stdout = codecs.getwriter("UTF-8")(sys.stdout)
 this.normalise()
 
@@ -99,7 +105,7 @@ if args.git :
 if not args.output :
     outfh = sys.stdout
 else :
-    outfh = codecs.open(outf, "w", encoding="utf-8")
+    outfh = codecs.open(args.output, "w", encoding="utf-8")
 
 this.serialize_xml(outfh.write)
 

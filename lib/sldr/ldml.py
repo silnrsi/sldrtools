@@ -411,7 +411,7 @@ class Ldml(ETWriter):
         curr = None
         comments = []
 
-        if fname is None:
+        if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
             self.root = getattr(et, '_Element_Py', et.Element)('ldml')
             self.root.document = self
             self.default_draft = 'unconfirmed'
