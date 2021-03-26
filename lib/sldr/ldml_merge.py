@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from sldr.ldml import Ldml
+from sldr.ldml import Ldml, _alldrafts
 import os
 
 try:
@@ -175,7 +175,7 @@ class LdmlMerge(Ldml):
                     t.mergeBase = bdict.pop(t.attrHash)
                     if t.mergeBase is not None: del blist[t.mergeBase.contentHash]
         for e in olist.values():       # pick up stuff in other but not in this
-            newe = self._copynode(e, this.parent)
+            newe = self._copynode(e, this)
             if base is not None and e.contentHash in blist:
                 newe.mergeBase = blist.pop(e.contentHash)
             elif base is not None:
@@ -226,7 +226,7 @@ class LdmlMerge(Ldml):
                     target.set('draft', _alldrafts[self.get_draft(other)])
         elif copycomments is not None:
             commentsource = base if copycomments == 'base' else other
-            if comentsource is not None:
+            if commentsource is not None:
                 for a in ('comments', 'commentsafter'):
                     if hasattr(commentsource, a):
                         setattr(target, a, getattr(commentsource, a))

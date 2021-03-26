@@ -82,7 +82,7 @@ else :
 if args.verbose:
     print(f"{args=}")
     print(f"{this.default_draft=} {base.default_draft=} {other.default_draft=}")
-if not args.nogeneration and this.merge(other, base, default=args.default, copycomments=args.copycomments) :
+if this.merge(other, base, default=args.default, copycomments=args.copycomments) and not args.nogeneration :
     # update the date
     idnode = this.find("./identity/generation")
     if idnode is None :

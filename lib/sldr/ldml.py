@@ -415,6 +415,8 @@ class Ldml(ETWriter):
             self.root = getattr(et, '_Element_Py', et.Element)('ldml')
             self.root.document = self
             self.default_draft = 'unconfirmed'
+            self._analyse()
+            self.normalise(self.root, usedrafts=usedrafts)
             return
         elif isinstance(fname, string_types):
             self.fname = fname
