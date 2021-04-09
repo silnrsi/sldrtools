@@ -223,7 +223,8 @@ def build_url_from_fontname(fontname):
     if pathname.startswith('Noto'):
         url = f'{noto_repo}hinted/ttf/{pathname}/{pathname}-Regular.ttf'
         if pathname.endswith(('JP', 'KR', 'SC', 'TC')):
-            url = f'{noto_cjk_repo}{pathname}-Regular.otf'
+            style = fontname.split()[1]
+            url = f'{noto_cjk_repo}{style}/{pathname}-Regular.otf'
         elif pathname == 'NotoSansTibetan':
             url = f'{noto_repo}archive/hinted/{pathname}/{pathname}-Regular.ttf'
         return [url]
