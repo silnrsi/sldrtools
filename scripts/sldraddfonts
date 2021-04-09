@@ -88,17 +88,19 @@ def read_feature_data(stylesheet_file_name):
             locale = rule.selectorText[len(':lang('):-1]
             locale = fix_locale.get(locale, locale)
             script = ''
+            full_tag = ''
 
             # find full locale
             try:
                 ts = lookup(locale, matchRegions=True, use639=True)
                 script = ts.script
-                css_locales.add(str(ts.tag))
+                full_tag = ts.full
+                css_locales.add(full_tag)
             except KeyError:
                 pass
 
             # record the script for each locale
-            css_scripts[locale] = script
+            css_scripts[full_tag] = script
 
             # find fonts and maybe features
             message = locale + ': '
@@ -114,7 +116,7 @@ def read_feature_data(stylesheet_file_name):
                         upgraded_font = replace_font.get(preferred_font, preferred_font)
                         fonts.append(upgraded_font)
                     if len(fonts) > 0:
-                        css2suggestions[locale] = fonts
+                        css2suggestions[full_tag] = fonts
                 if prop.name == 'font-feature-settings':
                     message += prop.name + prop.value
                     features = list()
@@ -123,7 +125,7 @@ def read_feature_data(stylesheet_file_name):
                         ldml_specified_feature = css_specified_feature.replace(' ', '=').replace('"', '')
                         features.append(ldml_specified_feature)
                     if len(features) > 0:
-                        css2features[locale] = features
+                        css2features[full_tag] = features
             # print(message)
 
 
@@ -257,19 +259,22 @@ def process_font(fonts, all_fonts, label=''):
 def write_font_data(sldrtree):
     """Write preferred font information to SLDR"""
 
+    full_tag = ''
+
     # Find locales specified in CSS that are not in the SLDR
     xml_locales = set()
     for xml_locale, filepath in find_ldml_files(sldrtree):
         try:
             ts = lookup(xml_locale, matchRegions=True, use639=True)
-            xml_locales.add(str(ts.tag))
+            full_tag = ts.full
+            xml_locales.add(full_tag)
         except KeyError:
             pass
 
     for locale in css_locales - xml_locales:
         pass
         # print(f'{locale}: only in css')
-    # No need to add the three locales found that are only in the CSS file
+    # No need to add the three (now one) locales found that are only in the CSS file
     # to LDML files (with just font info)
     # since their font is the same as the fallback script font.
     # Except that two of the languages (in a different script than the default)
@@ -302,9 +307,15 @@ def write_font_data(sldrtree):
     for xml_locale, filepath in find_ldml_files(sldrtree):
         preferred_fonts = list()
 
+        try:
+            ts = lookup(xml_locale, matchRegions=True, use639=True)
+            full_tag = ts.full
+        except KeyError:
+            print(f'Cannot find locale {full_tag} for writing')
+
         # Find preferred fonts (which might be specified in the CSS file)
-        preferred_fonts_from_csv = find_fonts_from_csv(xml_locale)
-        preferred_fonts_from_css = find_fonts_from_css(xml_locale)
+        preferred_fonts_from_csv = find_fonts_from_csv(full_tag)
+        preferred_fonts_from_css = find_fonts_from_css(full_tag)
 
         only_csv = sorted(set(preferred_fonts_from_csv) - set(preferred_fonts_from_css))
         only_css = sorted(set(preferred_fonts_from_css) - set(preferred_fonts_from_csv))
@@ -320,11 +331,11 @@ def write_font_data(sldrtree):
 
         # features
         features = ''
-        if xml_locale in css2features:
-            features_list = css2features[xml_locale]
+        if full_tag in css2features:
+            features_list = css2features[full_tag]
             features = ' '.join(features_list)
             message += ' ' + features
-        print(f'{xml_locale}:{filepath}:{message}')
+        print(f'{xml_locale}->{full_tag}:{filepath}:{message}')
 
         # Write preferred font to LDML file
         default = 'default'
@@ -332,7 +343,7 @@ def write_font_data(sldrtree):
             ldml = Ldml(filepath)
             resource_path = f'special/sil:external-resources/sil:font[@name="{preferred_font}"]'
             resource = ldml.ensure_path(resource_path)[0]
-            if features != '':
+            if features != '' and not preferred_font.startswith('Noto'):
                 resource.set('features', features)
             if default != '':
                 resource.set('types', default)
@@ -344,11 +355,8 @@ def write_font_data(sldrtree):
                 resource.text = url
             ldml.save_as(filepath, topns=True)
 
-            # only the first font is the default font...
+            # only the first font is the default font
             default = ''
-
-            # ...and has features from the CSS file
-            features = ''
 
 
 if __name__ == '__main__':
