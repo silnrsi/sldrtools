@@ -129,11 +129,6 @@ def read_feature_data(stylesheet_file_name):
                         # elif
                         # upgraded_font == 'Charis SIL Guinea':
                         #     features.update(['cv44=1', 'cv46=1'])
-                        elif upgraded_font == 'Annapurna SIL Nepal':
-                            # Graphite
-                            # features.update(['jhav=1', 'dig5=1', 'dig8=1', 'dig9=1'])
-                            # OpenType
-                            features.update(['ss01=1', 'ss08=1', 'ss09=1', 'ss10=1'])
                     if len(fonts) > 0:
                         css2suggestions[full_tag] = fonts
                 if prop.name == 'font-feature-settings':
@@ -357,6 +352,12 @@ def write_font_data(sldrtree):
             features_list = css2features[full_tag]
             features = ' '.join(features_list)
             message += ' ' + features
+        if 'Annapurna SIL Nepal' in preferred_fonts:
+            # Graphite
+            # features_list = ['jhav=1', 'dig5=1', 'dig8=1', 'dig9=1']
+            # OpenType
+            features_list = ['ss01=1', 'ss08=1', 'ss09=1', 'ss10=1']
+            features = ' '.join(features_list)
         for preferred_font in preferred_fonts:
             if ' SIL ' in preferred_font:
                 message += ' tuned'
