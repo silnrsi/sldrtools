@@ -380,6 +380,11 @@ def write_font_data(sldrtree):
                     resource.set('features', features)
             if default != '':
                 resource.set('types', default)
+            if preferred_font.startswith('Noto Sans'):
+                if preferred_font == 'Noto Sans Coptic':
+                    pass
+                else:
+                    resource.set('types', 'ui')
             url = find_url_from_fontname(preferred_font)
             if url != '':
                 resource_path += '/sil:url'
