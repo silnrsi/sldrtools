@@ -62,7 +62,7 @@ def read_feature_data(stylesheet_file_name):
 
     # Microsoft fonts are not OFL so are not added to the SLDR
     ignore_fonts = ['Times New Roman', 'Arial', 'Arial Black', 'Calibri', 'Cambria',
-                    'Tahoma', 'Verdana', 'Microsoft Himalaya', 'Angsana New',
+                    'Tahoma', 'Verdana', 'Georgia', 'Microsoft Himalaya', 'Angsana New',
                     'Arial Unicode MS']
 
     # Other fonts are virtual fonts and also do not need to be in the SLDR
@@ -75,6 +75,7 @@ def read_feature_data(stylesheet_file_name):
     ignore_fonts.append('Tagmukay')
     ignore_fonts.append('Noto Sans Mongolian')
     ignore_fonts.append('SILVai')
+    ignore_fonts.append('Namdhinggo SIL')
 
     fix_locale = json.load(open('fix_locale.json'))
     replace_font = json.load(open('replace_font.json'))
@@ -104,6 +105,7 @@ def read_feature_data(stylesheet_file_name):
 
             # find fonts and maybe features
             message = locale + ': '
+            features = set()
             for prop in rule.style:
                 if prop.name == 'font-family':
                     message += prop.name + prop.value
@@ -115,17 +117,36 @@ def read_feature_data(stylesheet_file_name):
                         # some fonts have been superseded by new (upgraded) fonts
                         upgraded_font = replace_font.get(preferred_font, preferred_font)
                         fonts.append(upgraded_font)
+
+                        # some fonts imply features
+                        if upgraded_font == 'Charis SIL AmArea':
+                            features.update(['cv43=2', 'ss04=1', 'cv90=1'])
+                        elif upgraded_font == 'Charis SIL Mali':
+                            features.update(['cv44=1', 'cv46=1'])
+                        elif upgraded_font == 'Charis SIL Literacy Compact':
+                            features.update(['ss01=1'])
+                        # the features for the following font are already specified in the css file
+                        # elif
+                        # upgraded_font == 'Charis SIL Guinea':
+                        #     features.update(['cv44=1', 'cv46=1'])
+                        elif upgraded_font == 'Annapurna SIL Nepal':
+                            # Graphite
+                            # features.update(['jhav=1', 'dig5=1', 'dig8=1', 'dig9=1'])
+                            # OpenType
+                            features.update(['ss01=1', 'ss08=1', 'ss09=1', 'ss10=1'])
                     if len(fonts) > 0:
                         css2suggestions[full_tag] = fonts
                 if prop.name == 'font-feature-settings':
                     message += prop.name + prop.value
-                    features = list()
                     specified_features = prop.value
                     for css_specified_feature in specified_features.split(', '):
                         ldml_specified_feature = css_specified_feature.replace(' ', '=').replace('"', '')
-                        features.append(ldml_specified_feature)
-                    if len(features) > 0:
-                        css2features[full_tag] = features
+                        features.update([ldml_specified_feature])
+
+            # features can come from being implied by a font name
+            # or listed in the CSS file
+            if len(features) > 0:
+                css2features[full_tag] = sorted(features)
             # print(message)
 
 
@@ -336,16 +357,26 @@ def write_font_data(sldrtree):
             features_list = css2features[full_tag]
             features = ' '.join(features_list)
             message += ' ' + features
+        for preferred_font in preferred_fonts:
+            if ' SIL ' in preferred_font:
+                message += ' tuned'
         print(f'{xml_locale}->{full_tag}:{filepath}:{message}')
 
         # Write preferred font to LDML file
         default = 'default'
         for preferred_font in preferred_fonts:
             ldml = Ldml(filepath)
+            if preferred_font == '':
+                continue
             resource_path = f'special/sil:external-resources/sil:font[@name="{preferred_font}"]'
             resource = ldml.ensure_path(resource_path)[0]
-            if features != '' and not preferred_font.startswith('Noto'):
-                resource.set('features', features)
+            if features != '':
+                if preferred_font.startswith('Noto'):
+                    pass
+                elif ' SIL ' in preferred_font:
+                    pass
+                else:
+                    resource.set('features', features)
             if default != '':
                 resource.set('types', default)
             url = find_url_from_fontname(preferred_font)
