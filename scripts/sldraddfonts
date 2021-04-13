@@ -15,6 +15,7 @@ css_scripts = dict()
 css2suggestions = dict()
 css2features = dict()
 css_locales = set()
+tuned_fonts = json.load(open('tuned_fonts.json'))
 font2urls = dict()
 url_cache = dict()
 
@@ -61,21 +62,9 @@ def read_feature_data(stylesheet_file_name):
     """Read CSS stylesheet for user font features"""
 
     # Microsoft fonts are not OFL so are not added to the SLDR
-    ignore_fonts = ['Times New Roman', 'Arial', 'Arial Black', 'Calibri', 'Cambria',
-                    'Tahoma', 'Verdana', 'Georgia', 'Microsoft Himalaya', 'Angsana New',
-                    'Arial Unicode MS']
-
-    # Other fonts are virtual fonts and also do not need to be in the SLDR
-    ignore_fonts.append('serif')
-
+    # Other fonts are virtual fonts (such as serif) and also do not need to be in the SLDR
     # Some fonts are specified for a script they are not designed to support
-    ignore_fonts.append('Tai Heritage Pro')
-    ignore_fonts.append('Khmer Dakdam')
-    ignore_fonts.append('Abyssinica SIL')
-    ignore_fonts.append('Tagmukay')
-    ignore_fonts.append('Noto Sans Mongolian')
-    ignore_fonts.append('SILVai')
-    ignore_fonts.append('Namdhinggo SIL')
+    ignore_fonts = json.load(open('ignore_fonts.json'))
 
     fix_locale = json.load(open('fix_locale.json'))
     replace_font = json.load(open('replace_font.json'))
@@ -112,23 +101,18 @@ def read_feature_data(stylesheet_file_name):
                     fonts = list()
                     preferred_fonts = prop.value.replace('"', '')
                     for preferred_font in preferred_fonts.split(', '):
-                        if preferred_font in ignore_fonts:
-                            continue
                         # some fonts have been superseded by new (upgraded) fonts
                         upgraded_font = replace_font.get(preferred_font, preferred_font)
-                        fonts.append(upgraded_font)
 
                         # some fonts imply features
-                        if upgraded_font == 'Charis SIL AmArea':
-                            features.update(['cv43=2', 'ss04=1', 'cv90=1'])
-                        elif upgraded_font == 'Charis SIL Mali':
-                            features.update(['cv44=1', 'cv46=1'])
-                        elif upgraded_font == 'Charis SIL Literacy Compact':
-                            features.update(['ss01=1'])
-                        # the features for the following font are already specified in the css file
-                        # elif
-                        # upgraded_font == 'Charis SIL Guinea':
-                        #     features.update(['cv44=1', 'cv46=1'])
+                        if upgraded_font in tuned_fonts:
+                            features.update(set(tuned_fonts[upgraded_font]))
+
+                        # fonts that do not need to be in the SLDR or were incorrect in the CSS file
+                        if preferred_font in ignore_fonts:
+                            continue
+
+                        fonts.append(upgraded_font)
                     if len(fonts) > 0:
                         css2suggestions[full_tag] = fonts
                 if prop.name == 'font-feature-settings':
@@ -141,7 +125,7 @@ def read_feature_data(stylesheet_file_name):
             # features can come from being implied by a font name
             # or listed in the CSS file
             if len(features) > 0:
-                css2features[full_tag] = sorted(features)
+                css2features[full_tag] = features
             # print(message)
 
 
@@ -273,6 +257,13 @@ def process_font(fonts, all_fonts, label=''):
     return message
 
 
+def features_set2str(features_set):
+    """Convert a set of features into a string"""
+    features_list = sorted(features_set)
+    features = ' '.join(features_list)
+    return features
+
+
 def write_font_data(sldrtree):
     """Write preferred font information to SLDR"""
 
@@ -301,7 +292,7 @@ def write_font_data(sldrtree):
     # Find locales specified in CSS that have font features
     for locale in css2features:
         message = ''
-        for feature in css2features[locale]:
+        for feature in sorted(css2features[locale]):
             message += '-' + feature + ': '
         preferred_font_count = 0
         if locale in css2suggestions:
@@ -347,17 +338,16 @@ def write_font_data(sldrtree):
         all_preferred_fonts.update(preferred_fonts)
 
         # features
-        features = ''
+        full_tag_features_set = set()
         if full_tag in css2features:
-            features_list = css2features[full_tag]
-            features = ' '.join(features_list)
-            message += ' ' + features
+            full_tag_features_set = css2features[full_tag]
         if 'Annapurna SIL Nepal' in preferred_fonts:
-            # Graphite
-            # features_list = ['jhav=1', 'dig5=1', 'dig8=1', 'dig9=1']
-            # OpenType
-            features_list = ['ss01=1', 'ss08=1', 'ss09=1', 'ss10=1']
-            features = ' '.join(features_list)
+            font_features_set = set(tuned_fonts['Annapurna SIL Nepal'])
+            full_tag_features_set.update(font_features_set)
+        full_tag_features = ''
+        if len(full_tag_features_set) > 0:
+            full_tag_features = features_set2str(full_tag_features_set)
+            message += ' ' + full_tag_features
         for preferred_font in preferred_fonts:
             if ' SIL ' in preferred_font:
                 message += ' tuned'
@@ -371,13 +361,21 @@ def write_font_data(sldrtree):
                 continue
             resource_path = f'special/sil:external-resources/sil:font[@name="{preferred_font}"]'
             resource = ldml.ensure_path(resource_path)[0]
-            if features != '':
-                if preferred_font.startswith('Noto'):
-                    pass
-                elif ' SIL ' in preferred_font:
-                    pass
-                else:
-                    resource.set('features', features)
+
+            # handle features
+            ldml_features = ''
+            if preferred_font.startswith('Noto'):
+                ldml_features = ''
+            elif preferred_font in tuned_fonts:
+                # remove the features (if any) that are implied by the font name
+                font_features_set = set(tuned_fonts[preferred_font])
+                ldml_features_set = full_tag_features_set - font_features_set
+                ldml_features = features_set2str(ldml_features_set)
+            else:
+                ldml_features = full_tag_features
+            if ldml_features != '':
+                resource.set('features', ldml_features)
+
             if default != '':
                 resource.set('types', default)
             if preferred_font.startswith('Noto Sans'):
