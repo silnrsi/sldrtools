@@ -31,6 +31,7 @@ from xml.etree import ElementPath as ep
 import re, os, codecs
 import xml.parsers.expat
 import functools
+from math import log10
 #from six import string_types
 from .py3xmlparser import XMLParser, TreeBuilder
 
@@ -288,13 +289,6 @@ class Ldml(ETWriter):
     use_draft = None
     nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
     keyContexts = {}            # cls.keyContexts[element] = set(attributes)
-    typeSortKeys = {"sun": 0, "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6,
-                    "midnight": 0, "am": 2, "noon": 3, "pm": 4,
-                        "morning1": 11, "afternoon1": 15, "evening1": 16, "night1": 17,
-                        "morning2": 21, "afternoon2": 25, "evening2": 26, "night2": 27,
-                    "one": 1, "two": 2, "many": 3, "other": 4,
-                    "start": -1, "middle": 0, "end": 1,     # so that 2 comes after end
-                   }
 
     @classmethod
     def ReadMetadata(cls, fname = None):
@@ -354,6 +348,7 @@ class Ldml(ETWriter):
         cls.elementCount = 0
         cls.attributeOrder = {}
         cls.elementOrder = {}
+        cls.attribvals = {}
         attribCount = {}
         cls.maxEls = 0
         def procmodel(name, nodes, cls, elementCount):
@@ -365,6 +360,12 @@ class Ldml(ETWriter):
                 if len(n[3]):
                     elementCount = procmodel(name, n[3], cls, elementCount)
             return elementCount
+        def procattrib(elname, attname, val):
+            if not val.startswith("(") or attname == "draft":
+                return
+            vals = val[1:-1].split("|")
+            ndig = "{{:0{}d}}".format(int(log10(len(vals)) + 1.))
+            cls.attribvals.setdefault(elname, {})[attname] = {v:ndig.format(i+1) for i,v in enumerate(vals)}
         def elementDecl(name, model):
             # model[]: 0: (EMPTY=1, ANY, MIXED, NAME, CHOICE, SEQ), 
             #          1: (NONE=0, OPT, REP, PLUS), 
@@ -383,6 +384,7 @@ class Ldml(ETWriter):
             attribCount[elname] += 1
             cls.attributeOrder[elname][attname] = attribCount[elname]
             cls.keyContexts.setdefault(elname, set()).add(attname)
+            procattrib(elname, attname, xmltype)
             curEl = elname
             curAttrib = attname
         def comment(txt):
@@ -734,18 +736,6 @@ class Ldml(ETWriter):
         else:
             return []
 
-    def _typeSortKey(self, k):
-        if k in self.typeSortKeys:
-            return "{:03}".format(self.typeSortKeys[k])
-        else:
-            try:
-                return "{:03}".format(int(k))
-            except TypeError:
-                pass
-            except ValueError:
-                pass
-        return k
-
     def normalise(self, base=None, addguids=True, usedrafts=False):
         """ Normalise according to LDML rules"""
         _digits = set('0123456789.')
@@ -762,14 +752,10 @@ class Ldml(ETWriter):
                 xl = self._sortedattrs(x)
                 res = [self.elementOrder.get(base.tag, {}).get(x.tag, self.maxEls), x.tag]
                 for k, a in ((l, x.get(l)) for l in xl):
-                    if k == 'id' and all(q in _digits for q in a):
-                        res += (k, float(a))
-                    elif k == 'id':
-                        res += (k, a.lower())
-                    elif k == 'type':
-                        res += (k, self._typeSortKey(a))
+                    if x.tag in self.attribvals and k in self.attribvals[x.tag]:
+                        res += (k, self.attribvals[x.tag][k].get(a, "{}{}".format(len(self.attribvals[x.tag][k]), a)))
                     else:
-                        res += (k, a)
+                        res += (k, a.lower())
                 return res
             children = sorted(base, key=keyel)              # if base.tag not in self.blocks else list(base)
             base[:] = children
