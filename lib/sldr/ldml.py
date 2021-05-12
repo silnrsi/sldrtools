@@ -769,12 +769,12 @@ class Ldml(ETWriter):
             temp = {}
             for c in base:
                 a = c.get('alt', None)
-                if a is None or a.find("proposed") == -1:
+                if a is None: # or a.find("proposed") == -1:
                     temp[c.attrHash] = c
             tbase = list(base)
             for c in tbase:
-                a = c.get('alt', '')
-                if a.find("proposed") != -1 and c.attrHash in temp:
+                a = c.get('alt', None)
+                if a is not None and c.attrHash in temp: # and a.find("proposed") != -1:
                     #a = re.sub(r"-?proposed.*$", "", a)
                     t = temp[c.attrHash]
                     if not hasattr(t, 'alternates'):
@@ -819,9 +819,9 @@ class Ldml(ETWriter):
         base.attrHash = _minhash(nominhash = True)
         base.attrHash.update(base.tag)                      # keying hash has tag
         for k, v in sorted(base.items()):                      # any consistent order is fine
-            if usedrafts and k == 'alt' and v.find("proposed") != -1:
-                val = re.sub(r"-?proposed.*$", "", v)
-                if len(val):
+            if usedrafts and k == 'alt': # and v.find("proposed") != -1:
+                val = v # re.sub(r"-?proposed.*$", "", v)
+                if False and len(val):
                     base.attrHash.update(k, val)
             elif k in distkeys:
                 base.attrHash.update(k, v)        # keying hash has key attributes

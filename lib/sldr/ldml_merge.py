@@ -242,7 +242,7 @@ class LdmlMerge(Ldml):
             target.alternates = dict(other.alternates)
             return (len(target.alternates) != 0)
         balt = getattr(base, 'alternates', {}) if base is not None else {}
-        allkeys = set(balt.keys() + target.alternates.keys() + other.alternates.keys())
+        allkeys = set(sum((list(getattr(x, 'alternates', {}).keys()) for x in (base, target, other)), []))
         for k in allkeys:
             if k not in balt:
                 if k not in other.alternates: continue
