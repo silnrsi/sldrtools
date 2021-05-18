@@ -22,16 +22,28 @@ url_cache = dict()
 
 def main():
     parser = argparse.ArgumentParser(description='Populate font information to LDML files')
-    parser.add_argument("sldr", help="root of SLDR tree to write into")
     parser.add_argument('datafile', help='CSV file export from Google Sheet document Script2Font')
-    parser.add_argument('stylesheet', help='CSS stylesheet with user settable font features')
-    parser.add_argument('--version', action='version', version='%(prog)s: 0.1')
+    parser.add_argument('--fontname', help='Name of font to add to LDML file')
+    parser.add_argument('--ldml', help='LDML file')
+    parser.add_argument('--sldr', help='root of SLDR tree to write into')
+    parser.add_argument('--stylesheet', help='CSS stylesheet with user settable font features')
+    parser.add_argument('--version', action='version', version='%(prog)s: 0.2')
     args = parser.parse_args()
 
+    preferred_fonts = list()
+
     read_font_data(args.datafile)
-    read_feature_data(args.stylesheet)
-    read_url_data()
-    write_font_data(args.sldr)
+    if args.stylesheet:
+        read_feature_data(args.stylesheet)
+        read_url_data()
+        report_css_information(args.sldr)
+    if args.sldr:
+        write_all_font_data(args.sldr)
+    if args.fontname:
+        preferred_fonts.append(args.fontname)
+    if args.ldml:
+        locale = filename2locale(args.ldml)
+        write_font_data(locale, args.ldml, preferred_fonts)
 
 
 def read_font_data(data_file_name):
@@ -238,11 +250,17 @@ def build_url_from_fontname(fontname):
     return urls
 
 
+def filename2locale(filepath):
+    """Convert a path to a LDML file to a locale"""
+    locale = os.path.splitext(os.path.basename(filepath))[0].replace('_', '-')
+    return locale
+
+
 def find_ldml_files(sldrtree):
     """Find LDML files in the SLDR"""
     for filepath in iterate_files(sldrtree):
         # Find preferred font
-        xml_locale = os.path.splitext(os.path.basename(filepath))[0].replace('_', '-')
+        xml_locale = filename2locale(filepath)
         yield xml_locale, filepath
 
 
@@ -264,8 +282,8 @@ def features_set2str(features_set):
     return features
 
 
-def write_font_data(sldrtree):
-    """Write preferred font information to SLDR"""
+def report_css_information(sldrtree):
+    """Report on features and missing locales"""
 
     full_tag = ''
 
@@ -308,18 +326,31 @@ def write_font_data(sldrtree):
             message += '-review'
         print(f'{locale} in {script}::: {message}')
 
-    # Determine what URLs are needed for fonts
-    all_preferred_fonts = set()
+
+def write_all_font_data(sldrtree):
+    """Write preferred font information to SLDR"""
 
     # Update SLDR with better font information
     for xml_locale, filepath in find_ldml_files(sldrtree):
         preferred_fonts = list()
+        write_font_data(xml_locale, filepath, preferred_fonts)
 
+
+def write_font_data(xml_locale, filepath, preferred_fonts):
+    """Write preferred font to a LDML file"""
+
+    full_tag = ''
+
+    # Determine what URLs are needed for fonts
+    all_preferred_fonts = set()
+
+    if True:
         try:
             ts = lookup(xml_locale, matchRegions=True, use639=True)
             full_tag = ts.full
         except KeyError:
-            print(f'Cannot find locale {full_tag} for writing')
+            print(f'Cannot find locale {full_tag} from {xml_locale} for writing')
+            return
 
         # Find preferred fonts (which might be specified in the CSS file)
         preferred_fonts_from_csv = find_fonts_from_csv(full_tag)
