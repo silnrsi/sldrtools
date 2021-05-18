@@ -197,7 +197,7 @@ class LdmlMerge(Ldml):
         # if base != target && base better than target
         if base is not None and base.contentHash != target.contentHash and (base.text or base.tag in self.blocks) and self.get_draft(base) < self.get_draft(target, default):
             res = True
-            self._add_alt(base, target, default=default)  # add target as alt of target
+            self._add_alt(base, target, default=default)  # add target as alt of base
             target[:] = base                                # replace content of target
             for a in ('text', 'contentHash', 'comments', 'commentsafter'):
                 if hasattr(base, a):
@@ -211,9 +211,11 @@ class LdmlMerge(Ldml):
         elif base is None and other is not None and other.contentHash != target.contentHash and (target.text or target.tag in self.blocks):
             res = True
             if self.get_draft(target, default) < self.get_draft(other, default):
-                self._add_alt(target, other, default=default)
+                if getattr(self, 'clashadd', False):
+                    self._add_alt(target, other, default=default)
             else:
-                self._add_alt(other, target, default=default)
+                if getattr(self, 'clashadd', False):
+                    self._add_alt(other, target, default=default)
                 target[:] = other
                 for a in ('text', 'contentHash', 'comments', 'commentsafter'):
                     if hasattr(other, a):
@@ -345,7 +347,7 @@ class LdmlMerge(Ldml):
         return res
 
     def clash_text(self, ttext, otext, btext, this, other, base, usedrafts = False, default=None):
-        if usedrafts:
+        if usedrafts and getattr(self, 'clashadd', False):
             if default is None:
                 default = self.default_draft
             bdraft = self.get_draft(base)
