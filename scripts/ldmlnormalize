@@ -4,20 +4,38 @@ import argparse, os
 from sldr.ldml import Ldml
 
 parser = argparse.ArgumentParser()
-parser.add_argument("infile", help="Input file")
-parser.add_argument("outfile", nargs="?", help="Output file, default to input")
+parser.add_argument("infile", help="Input file or directory")
+parser.add_argument("outfile", nargs="?", help="Output file or directory, default to input")
 parser.add_argument("-v","--validate",action="store_true", help="Validate file")
 args = parser.parse_args()
 
-if args.outfile is None:
-    args.outfile = args.infile
+if os.path.isfile(args.infile):
+    allins = [args.infile]
+    allouts = [args.outfile or args.infile]
+else:
+    allins = []
+    allouts = []
+    for d in os.listdir(args.infile):
+        di = os.path.join(args.infile, d)
+        do = os.path.join((args.outfile or args.infile), d)
+        if di.endswith(".xml") or di.endswith(".ldml"):
+            allins.append(di)
+            allouts.append(do)
+        else:
+            for f in os.listdir(di):
+                fi = os.path.join(di, f)
+                fo = os.path.join(do, f)
+                if fi.endswith(".xml") or fi.endswith(".ldml"):
+                    allins.append(fi)
+                    allouts.append(fo)
 
-l = Ldml(args.infile)
-l.save_as(args.outfile)
+for fi, fo in zip(allins, allouts):
+    l = Ldml(fi)
+    l.save_as(fo)
 
-if args.validate:
-    from lxml.etree import parse, RelaxNG
-    validator = RelaxNG(file=os.path.join(os.path.dirname(__file__), '..', 'doc', 'sil.rng'))
-    xml = parse(args.infile)
-    validator.assertValid(xml)
+    if args.validate:
+        from lxml.etree import parse, RelaxNG
+        validator = RelaxNG(file=os.path.join(os.path.dirname(__file__), '..', 'doc', 'sil.rng'))
+        xml = parse(fi)
+        validator.assertValid(xml)
 

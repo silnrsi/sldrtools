@@ -41,6 +41,7 @@ parser.add_argument('-s','--single',action='store_true', help='Turn off multipro
 parser.add_argument('--seed',action='store_true',help='Pulling from CLDR seed')
 parser.add_argument('--hg',action='store_true',help='Get revision and date information from hg repo indir/../.hg')
 parser.add_argument('-t','--topns',action='store_true',help='Outputs namespace declarations at top of file instead of as low as possible')
+parser.add_argument('-r','--remove',action='store_true',help='Remove existing files not in source')
 args = parser.parse_args()
 
 subdirs = ('main', 'collation', 'casing', 'segments')
@@ -51,6 +52,15 @@ for s in subdirs :
     for l in os.listdir(os.path.join(args.indir, s)) :
         if l[-4:].lower() == '.xml' :
             alllocales.add(l[:-4])
+
+if args.remove:
+    existinglocales = set()
+    for s in os.listdir(args.outdir):
+        sp = os.path.join(args.outdir, s)
+        if os.path.isdir(sp):
+            for l in os.listdir(sp):
+                if l[-4:].lower() == ".xml":
+                    existinglocales.add(l[:-4])
 
 # define this function after declaring args so we can access args within it
 def doit(a) :
@@ -73,7 +83,9 @@ def doit(a) :
             curr.add_silidentity(draft = 'approved', source = 'cldr')
         if args.hg :
             dohg(curr, allfiles)
-        outfh = codecs.open(os.path.join(args.outdir, a + '.xml'), "w", encoding="utf-8")
+        p = os.path.join(args.outdir, a[0])
+        os.makedirs(p, exist_ok=True)
+        outfh = codecs.open(os.path.join(p, a + '.xml'), "w", encoding="utf-8")
         curr.serialize_xml(outfh.write, topns=args.topns)
         outfh.close()
 
@@ -101,3 +113,8 @@ else :
     for l in alllocales :
         doit(l)
 
+if args.remove:
+    for l in existinglocales - alllocales:
+        fp = os.join(args.outdir, l[0], l+".xml")
+        if os.path.exists(fp):
+            os.unlink(fp)
