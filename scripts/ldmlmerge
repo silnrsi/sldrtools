@@ -45,6 +45,7 @@ parser.add_argument('this',help='File of interest')
 parser.add_argument('base',help="Common ancestor, or file to use in git")
 parser.add_argument('other',nargs='?',help='Another file of interest')
 parser.add_argument('-o','--output',help="Output file")
+parser.add_argument('-w','--winner',help="Clash win: other, this")
 parser.add_argument('-d','--dirs',action='append',help='Directory to search for ldml files, repeatable')
 parser.add_argument('-g','--git',action='store_true',help='Automatically work out what to do inside a git repo using sil:identity/@revid')
 parser.add_argument('-c','--default',default='proposed',help="Default Change draft level")
@@ -53,7 +54,7 @@ parser.add_argument('-G','--nogeneration',action="store_true",help="Don't update
 parser.add_argument('-v','--verbose',action="store_true",help="Be verbose")
 args = parser.parse_args()
 
-this = LdmlMerge(args.this)
+this = LdmlMerge(args.this, winner=args.winner)
 if args.dirs :
     this = flattenlocale(this, dirs=args.dirs, rev='f', fname=args.this)
 
@@ -90,7 +91,7 @@ if this.merge(other, base, default=args.default, copycomments=args.copycomments)
         idnode = i.makeelement("generation", {})
         # idnode = et.SubElement(i, "generation")
     currdate = datetime.now()
-    currdate.microsecond = 0
+    #currdate.microsecond = 0
     #idnode.set("date","$Date: " + currdate.isoformat() + " $")
 sys.stdout = codecs.getwriter("UTF-8")(sys.stdout)
 this.normalise()

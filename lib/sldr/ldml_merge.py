@@ -52,6 +52,10 @@ class _arrayDict(dict):
 
 class LdmlMerge(Ldml):
 
+    def __init__(self, fname, usedrafts=True, uparrows=False, winner=None):
+        super().__init__(fname, usedrafts=usedrafts, uparrows=uparrows)
+        self.winner = winner
+
     def difference(self, other, this=None):
         """Strip out from self, everything that is in other, if the values are the same."""
         if this == None: this = self.root
@@ -190,7 +194,8 @@ class LdmlMerge(Ldml):
             this.append(newe)
 
     def _merge_with_alts(self, base, other, target, default=None, copycomments=None):
-        """3-way merge the alternates putting the results in target. Assumes target content is the required ending content"""
+        """3-way merge the alternates putting the results in target. Assumes target content is the required ending content.
+           Returns True if the merge did the work."""
         res = False
         if default is None:
             default = base.default_draft
@@ -294,9 +299,8 @@ class LdmlMerge(Ldml):
                 continue
             if t.mergeOther is not None and t.mergeOther.contentHash != t.contentHash:     # other differs
                 if t.mergeBase.contentHash == t.contentHash:   # base doesn't
-                    if self.useDrafts:
-                        res |= self._merge_with_alts(t.mergeBase, t.mergeOther, t, default=default, copycomments=copycomments)
-                    else:
+                    if not self.useDrafts or \
+                            not self._merge_with_alts(t.mergeBase, t.mergeOther, t, default=default, copycomments=copycomments):
                         this.remove(t)                                  # swap us out
                         this.append(t.mergeOther)
                         res = True
@@ -304,7 +308,7 @@ class LdmlMerge(Ldml):
                     res |= self.merge(t.mergeOther, t.mergeBase, t, default=default)        # could be a clash so recurse
                 elif self.useDrafts:       # base == other
                     res |= self._merge_with_alts(t.mergeBase, t.mergeOther, t, default=default, copycomments=copycomments)
-            elif t.mergeOther is None and t.mergeBase.contentHash == t.contentHash:
+            elif t.mergeOther is None and (t.mergeBase.contentHash == t.contentHash or self.winner == "other"):
                 this.remove(t)
                 res = True
             elif self.useDrafts:
