@@ -67,7 +67,7 @@ class LdmlMerge(Ldml):
             for t in filter(lambda x: x.attrHash == o.attrHash, this):
                 if o.contentHash == t.contentHash or (o.tag not in self.blocks and self.difference(o, this=t)):
                     if hasattr(t, 'alternates') and hasattr(o, 'alternates'):
-                        for (k, v) in o.alternates:
+                        for (k, v) in o.alternates.items():
                             if k in t.alternates and v.contentHash == t.alternates[k].contentHash:
                                 del t.alternates[k]
                         if len(t.alternates) == 0:
