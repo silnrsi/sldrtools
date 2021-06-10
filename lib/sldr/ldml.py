@@ -677,13 +677,13 @@ class Ldml(ETWriter):
         res = self._unify_path(steps, base=base, action=action, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
         return (res, steps)
 
-    def ensure_path(self, path, text=None, draft=None, alt=None, before=None, **kw):
+    def ensure_path(self, path, text=None, draft=None, alt=None, before=None, dontadd=False, **kw):
         """ Find a node in a path and create any intermediate nodes, including the final, necessary
             Returns a list of nodes found, or created, even if only 1.
             If text is given, only return matching nodes, creating if necessary. If the draft of a matching
             string is worse then improve it."""
-        (newcurr, steps) = self._process_path(path, action="add", text=text, draft=draft, alt=alt, **kw)
-        if text is not None:
+        (newcurr, steps) = self._process_path(path, action=("find" if dontadd else "add"), text=text, draft=draft, alt=alt, **kw)
+        if text is not None and not dontadd:
             curr = newcurr
             newcurr = []
             for job in curr:
@@ -717,12 +717,10 @@ class Ldml(ETWriter):
         return {v:k for k, v in ns.items()}
 
     def find(self, path, elem=None, ns=None):
-        if elem is None: elem = self.root
-        return elem.find(path, self._invertns(ns or self.namespaces))
+        return self.ensure_path(path, dontadd=True, base=elem)[0]
 
     def findall(self, path, elem=None, ns=None):
-        if elem is None: elem = self.root
-        return elem.findall(path, self._invertns(ns or self.namespaces))
+        return self.ensure_path(path, dontadd=True, base=elem)
 
     def get_parent_locales(self, thislangtag):
         """ Find the parent locales for this ldml, given its langtag"""
@@ -769,17 +767,16 @@ class Ldml(ETWriter):
             temp = {}
             for c in base:
                 a = c.get('alt', None)
-                if a is None: # or a.find("proposed") == -1:
-                    temp[c.attrHash] = c
+                if c.attrHash not in temp or a not in temp[c.attrHash] \
+                        or self.get_draft(c, default=self.default_draft) < self.get_draft(temp[c.attrHash][a], default=self.default_draft):
+                    temp.setdefault(c.attrHash, {})[a] = c
+            for k, v in temp.items():
+                if None in v:
+                    v[None].alternates = {nk: nv for nk, nv in v.items() if nk is not None}
             tbase = list(base)
             for c in tbase:
                 a = c.get('alt', None)
-                if a is not None and c.attrHash in temp: # and a.find("proposed") != -1:
-                    #a = re.sub(r"-?proposed.*$", "", a)
-                    t = temp[c.attrHash]
-                    if not hasattr(t, 'alternates'):
-                        t.alternates = {}
-                    t.alternates[a] = c
+                if a is not None or id(temp[c.attrHash][a]) != id(c):
                     base.remove(c)
 
     def _analyse(self):
