@@ -717,7 +717,10 @@ class Ldml(ETWriter):
         return {v:k for k, v in ns.items()}
 
     def find(self, path, elem=None, ns=None):
-        return self.ensure_path(path, dontadd=True, base=elem)[0]
+        res = self.ensure_path(path, dontadd=True, base=elem)
+        if len(res):
+            return res[0]
+        return None
 
     def findall(self, path, elem=None, ns=None):
         return self.ensure_path(path, dontadd=True, base=elem)
