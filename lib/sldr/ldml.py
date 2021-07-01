@@ -284,8 +284,8 @@ class _minhash(object):
 
 
 class Ldml(ETWriter):
-    takesCData = set(('cr',))
     silns = "urn://www.sil.org/ldml/0.1"
+    takesCData = set(('cr','sil:note'.format(silns)))
     use_draft = None
     nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
     keyContexts = {}            # cls.keyContexts[element] = set(attributes)
@@ -305,7 +305,7 @@ class Ldml(ETWriter):
                 cls.variables[name] = v.text.split()
             elif v.text:
                 cls.variables[name] = v.text.strip()
-        cls.blocks = set(base.find('blocking/blockingItems').get('elements', '').split())
+        cls.serialElements = set(base.find('serialElements').text.split() + ['special'])
         cls.keys = set()
         for e in base.findall('distinguishing/distinguishingItems'):
             if 'elements' in e.attrib:
@@ -758,7 +758,7 @@ class Ldml(ETWriter):
                     else:
                         res += (k, a.lower())
                 return res
-            children = sorted(base, key=keyel)              # if base.tag not in self.blocks else list(base)
+            children = sorted(base, key=keyel)
             base[:] = children
         if base.text:
             t = base.text.strip()
@@ -766,7 +766,7 @@ class Ldml(ETWriter):
         base.tail = None
         if usedrafts or addguids:
             self._calc_hashes(base, usedrafts=usedrafts)
-        if usedrafts:                                       # pack up all alternates
+        if usedrafts:        # pack up all alternates
             temp = {}
             for c in base:
                 a = c.get('alt', None)
@@ -775,11 +775,20 @@ class Ldml(ETWriter):
                     temp.setdefault(c.attrHash, {})[a] = c
             for k, v in temp.items():
                 if None in v:
-                    v[None].alternates = {nk: nv for nk, nv in v.items() if nk is not None}
+                    resk = None
+                else:
+                    resk = min(v.keys(), key=lambda x: self.get_draft(v[x], self.default_draft))
+                newalts = {nk: nv for nk, nv in v.items() if nk is not resk}
+                for nk in list(v.keys()):
+                    if nk is not resk:
+                        del v[nk]
+                v[resk].alternates = newalts
             tbase = list(base)
             for c in tbase:
+                if c.tag in self.serialElements:
+                    continue
                 a = c.get('alt', None)
-                if a is not None or id(temp[c.attrHash][a]) != id(c):
+                if a not in temp[c.attrHash] or id(temp[c.attrHash][a]) != id(c):
                     base.remove(c)
 
     def _analyse(self):
