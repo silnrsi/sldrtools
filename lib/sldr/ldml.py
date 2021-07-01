@@ -285,7 +285,7 @@ class _minhash(object):
 
 class Ldml(ETWriter):
     silns = "urn://www.sil.org/ldml/0.1"
-    takesCData = set(('cr','sil:note'.format(silns)))
+    takesCData = set(('cr','sil:note', 'sil:text'))
     use_draft = None
     nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
     keyContexts = {}            # cls.keyContexts[element] = set(attributes)
@@ -762,7 +762,7 @@ class Ldml(ETWriter):
             base[:] = children
         if base.text:
             t = base.text.strip()
-            base.text = re.sub(r'\s*\n\s*', '\n', t)       # content hash has text in lines
+            base.text = re.sub(r'[ \t]*\n[ \t]*', '\n', t)       # content hash has text in lines
         base.tail = None
         if usedrafts or addguids:
             self._calc_hashes(base, usedrafts=usedrafts)
