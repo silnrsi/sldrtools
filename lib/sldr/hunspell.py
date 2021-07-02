@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 class Aff:
     def __init__(self, filename):
         self.fname = filename
