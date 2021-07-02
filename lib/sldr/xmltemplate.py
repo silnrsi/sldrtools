@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import lxml.etree as et
 import codecs, re, copy
