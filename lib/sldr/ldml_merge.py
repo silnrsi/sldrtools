@@ -65,7 +65,7 @@ class LdmlMerge(Ldml):
             return (other.contentHash == this.contentHash)
         for o in other:
             for t in filter(lambda x: x.attrHash == o.attrHash, this):
-                if o.contentHash == t.contentHash or (o.tag not in self.blocks and self.difference(o, this=t)):
+                if o.contentHash == t.contentHash or self.difference(o, this=t):
                     if hasattr(t, 'alternates') and hasattr(o, 'alternates'):
                         for (k, v) in o.alternates.items():
                             if k in t.alternates and v.contentHash == t.alternates[k].contentHash:
@@ -93,10 +93,7 @@ class LdmlMerge(Ldml):
         for t in filter(lambda x: x.attrHash == o.attrHash, this):
             addme = False
             if o.contentHash != t.contentHash:
-                if o.tag not in self.blocks:
-                    self.overlay(o, usedrafts=usedrafts, this=t)
-                elif usedrafts:
-                    self._merge_leaf(other, t, o)
+                self.overlay(o, usedrafts=usedrafts, this=t)
                 if t.text == u"↑↑↑" and o.text != "":
                     t.text = o.text
             break  # only do one alignment
@@ -200,7 +197,7 @@ class LdmlMerge(Ldml):
         if default is None:
             default = base.default_draft
         # if base != target && base better than target
-        if base is not None and base.contentHash != target.contentHash and (base.text or base.tag in self.blocks) and self.get_draft(base) < self.get_draft(target, default):
+        if base is not None and base.contentHash != target.contentHash and base.text and self.get_draft(base) < self.get_draft(target, default):
             res = True
             self._add_alt(base, target, default=default)  # add target as alt of base
             target[:] = base                                # replace content of target
@@ -213,7 +210,7 @@ class LdmlMerge(Ldml):
                 del target.attrib['alt']
             if self.get_draft(base) != target.document.default_draft:
                 target.set('draft', _alldrafts[self.get_draft(base)])
-        elif base is None and other is not None and other.contentHash != target.contentHash and (target.text or target.tag in self.blocks):
+        elif base is None and other is not None and other.contentHash != target.contentHash and target.text:
             res = True
             if self.get_draft(target, default) < self.get_draft(other, default):
                 if getattr(self, 'clashadd', False):
