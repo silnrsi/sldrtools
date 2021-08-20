@@ -413,16 +413,17 @@ class Ldml(ETWriter):
         curr = None
         comments = []
 
-        if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
-            self.root = getattr(et, '_Element_Py', et.Element)('ldml')
-            self.root.document = self
-            self.default_draft = 'unconfirmed'
-            self._analyse()
-            self.normalise(self.root, usedrafts=usedrafts)
-            return
-        elif isinstance(fname, string_types):
-            self.fname = fname
-            fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
+        if fname is None or isinstance(fname, string_types):
+            if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
+                self.root = getattr(et, '_Element_Py', et.Element)('ldml')
+                self.root.document = self
+                self.default_draft = 'unconfirmed'
+                self._analyse()
+                self.normalise(self.root, usedrafts=usedrafts)
+                return
+            else:
+                self.fname = fname
+                fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
         else:
             fh = fname
         if hasattr(et, '_Element_Py'):
@@ -884,6 +885,9 @@ class Ldml(ETWriter):
         ldraft = e.get('draft', None) if e is not None else None
         if ldraft is not None: return draftratings.get(ldraft, 5)
         return draftratings.get(default, draftratings[self.default_draft])
+
+    def draftnum(self, d):
+        return draftratings.get(d, draftratings[self.default_draft])
 
     def resolve_aliases(self, this=None, _cache=None):
         """ Go through resolving aliases to actual content nodes """
