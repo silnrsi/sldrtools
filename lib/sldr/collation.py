@@ -242,6 +242,31 @@ class Collation(dict):
             # remove any non-inserted subsorts in the subsequences
             self._stripoverlaps(zip(*bases[k][1:]), zip(*v[1:]))
 
+    def getSortKey(self, s):
+        keys = []
+        inc = 1. / pow(10, int(log10(len(self)))+1)
+        curr = ""
+        for c in s:
+            if curr+c not in self:
+                if curr:
+                    keys.append(self[curr].sortkey(self, self.ducet, inc))
+                    curr = ""
+                else:
+                    keys.append(ducetSortKey(self.ducet, c))
+            else:
+                curr += c
+        if curr:
+            keys.append(self[curr].sortkey(self, self.ducet, inc))
+        res = [[], [], []]
+        for k in keys:
+            for i in range(3):
+                for e in k[i]:
+                    if e != 0:
+                        res[i].append(e)
+        for i in range(3):
+            if not len(res[i]):
+                res[i] = [100000]
+        return res
 
 class CollElement(object):
 

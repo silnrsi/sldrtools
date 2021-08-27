@@ -272,7 +272,7 @@ def parseitem(s, ind, lastitem, end):
             elif op == '&' and lastitem and item:
                 if lastitem.negative:
                     if item.negative:
-                        res = item + lastitem
+                        res = item.union(lastitem)
                     else:
                         res = item - lastitem
                 elif item.negative:
