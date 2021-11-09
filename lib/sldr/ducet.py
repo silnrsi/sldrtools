@@ -103,5 +103,18 @@ def _generateSortKey(rawSortKey, separate=False) :
             
 # leveledResult = [[ki[level] for ki in rawSortKey] for level in range(3)]
   
-
+def keyfn(ducetDict, level=4):
+    class K:
+        def __init__(self, obj, *a):
+            self.obj = obj
+        def __lt__(self, other):
+            return 0 > ducetCompare(self.ducetDict, self.obj, other.obj) >= -level
+        def __gt__(self, other):
+            return 0 < ducetCompare(self.ducetDict, self.obj, other.obj) <= level
+        def __le__(self, other):
+            return ducetCompare(self.ducetDict, self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return ducetCompare(self.ducetDict, self.obj, other.obj) >= 0
+        def __str__(self):
+            return " ".join(_generateSortKey(self.ducetDict[self.obj]))
 

@@ -480,7 +480,7 @@ class Ldml(ETWriter):
             res.parent = parent
         return res
 
-    def addnode(self, parent, tag, attrib=None, alt=None, **attribs):
+    def addnode(self, parent, tag, attrib=None, alt=None, returnnew=False, **attribs):
         ''' Adds a node, keeping the best alternate at the front '''
         if attrib is not None:
             attrib = dict((k,v) for k,v in attrib.items() if v) # filter @x=""
@@ -500,7 +500,8 @@ class Ldml(ETWriter):
             if len(equivs):
                 if 'alt' not in e.attrib:
                     e.set('alt', alt)
-                return self._add_alt_leaf(equivs[0], e, default=e.get('draft', None), leaf=True, alt=alt)
+                newhead = self._add_alt_leaf(equivs[0], e, default=e.get('draft', None), leaf=True, alt=alt)
+                return e if returnnew else newhead
         parent.append(e)
         return e
 
