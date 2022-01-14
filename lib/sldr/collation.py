@@ -6,7 +6,7 @@ from __future__ import print_function
 import re, copy, os
 import unicodedata as ud
 from math import log10
-from itertools import groupby
+from itertools import groupby, zip_longest
 from difflib import SequenceMatcher
 
 def escape(s, allchars=False):
@@ -52,17 +52,16 @@ def ducetSortKey(d, k, extra=None):
             if extra and k[:i] in extra:
                 key = extra[k[:i]].key
             else:
-                key = zip(*d[k[:i]])
+                key = list(zip(*d[k[:i]]))
         except KeyError:
             i -= 1
             continue
-        key_list = list(key)
-        res = [res[j] + list(key_list[j]) for j in range(3)]
+        res = [res[j] + list(key[j]) for j in range(3)]
         k = k[i:]
         i = len(k)
-    return res
+    return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
-def filtersame(dat, level):
+def _filtersame(dat, level):
     '''A kind of groupby, return first of every sequence with the sortkey
         up to the given level'''
     # anyopne want to refactor this to use groupby()?
@@ -75,7 +74,7 @@ def filtersame(dat, level):
             res.append(d)
     return res
 
-def makegroupdict(dat, keyfunc):
+def _makegroupdict(dat, keyfunc):
     '''Create a dictionary for each sublist of dat keyed by first
         in sublist. Used to collect subgroups with the same primary
         key keyed by the first in the sublist.'''
@@ -114,6 +113,51 @@ def readDucet(path="") :
     if not path:
         __moduleDucet__ = result
     return result
+
+
+class SortKey(list):
+    def append(self, other):
+        self[:] = self + other
+
+    def __add__(self, other):
+        return [sum(z, []) for z in zip_longest(self, other, fillvalue=[])]
+
+    def cmp(self, other):
+        ''' Returns the level of the difference and negative if self < other '''
+        for i, z in enumerate(zip_longest(self, other)):
+            if z[0] < z[1]:
+                return -(i+1)
+            elif z[0] > z[1]:
+                return i+1
+        return 0
+
+    def __lt__(self, other):
+        return self.cmp(other) < 0
+
+    def __gt__ (self, other):
+        return self.cmp(other) > 0
+
+    def __eq__(self, other):
+        return self.cmp(other) == 0
+
+    def __ge__(self, other):
+        return self.cmp(other) >= 0
+
+    def __le__(self, other):
+        return self.cmp(other) <= 0
+
+    def __iadd__(self, other):
+        return self.append(other)
+
+    def __ne__(self, other):
+        return self.cmp(other) != 0
+
+    def copy(self):
+        return self.__class__([v.copy() for v in self])
+
+    def __hash__(self):
+        return hash(tuple(tuple(x) for x in self))
+
 
 class Collation(dict):
 
@@ -209,7 +253,7 @@ class Collation(dict):
         a = list(a_arg)
         b = list(b_arg)
         if len(a) > 0 and len(b) > 0:
-            s = SequenceMatcher(a=a[0], b=b[0])
+            s = SequenceMatcher(a=a, b=b)
             for g in s.get_opcodes():
                 if g[0] == 'insert' or g[0] == 'replace': continue
                 for i in range(g[3], g[4]):
@@ -227,20 +271,83 @@ class Collation(dict):
         base = sorted([(x, ducetSortKey(self.ducet, x)) for x in alphabet if x in self.ducet], key=lambda x: x[1])
         this = sorted([(x, ducetSortKey(self.ducet, x, extra=self)) for x in alphabet], key=lambda x: x[1])
         # strip down to only primary orders
-        basep = filtersame(base, 1)
-        thisp = filtersame(this, 1)
+        basep = _filtersame(base, 1)
+        thisp = _filtersame(this, 1)
         # Remove any non-inserted elements
-        self._stripoverlaps(zip(*basep), zip(*thisp))
+        self._stripoverlaps(basep, thisp)
 
         # dict[primary] = list of (k, sortkey(k)) with same primary as primary
-        bases = makegroupdict(base, lambda x:x[1][0])
-        thiss = makegroupdict(this, lambda x:x[1][0])
+        bases = _makegroupdict(base, lambda x:x[1][0])
+        thiss = _makegroupdict(this, lambda x:x[1][0])
         for k, v in thiss.items():
             # no subsorting then ignore, if primary is tailored then all subsorts are tailored too
             if len(v) == 1 or k in self:
                 continue
             # remove any non-inserted subsorts in the subsequences
-            self._stripoverlaps(zip(*bases[k][1:]), zip(*v[1:]))
+            self._stripoverlaps(bases[k][1:], v[1:])
+
+    def getSortKey(self, s):
+        keys = SortKey()
+        inc = 1. / pow(10, int(log10(len(self)+1)))
+        for c in self.itemise(s):
+            keys.append(ducetSortKey(self.ducet, c, extra=self))
+        for i in range(3):
+            if not len(keys[i]):
+                keys[i] = [100000]
+        return keys
+
+    def itemise(self, s):
+        curr = ""
+        for c in s:
+            if curr+c not in self and curr+c not in self.ducet:
+                yield curr
+                curr = ""
+            curr += c
+        yield curr
+
+    def convertSimple(self, valueList):
+        sortResult = []
+        alphabet = []
+        simple = True
+        simplelist = list("abcdefghijklmnopqrstuvwxyz'")
+        if len(valueList) > 0 :
+            currBase = None
+            for value in valueList :
+                spaceItems = value.split(' ')
+                if len(spaceItems) == 2 and spaceItems[0].lower() == spaceItems[1].lower():
+                    # Kludge: deal with a limitation of Paratext. Since these items are case equivalent, the user probably
+                    # intended x/X rather than x X and was not permitted by Paratext.
+                    spaceItems = ["{}/{}".format(*spaceItems)]
+                sortSpecItems = []
+                spaceSep = "&"
+                prevSlashItems = None
+                currLevel = 1
+                for spaceItem in spaceItems :
+                    slashItems = spaceItem.split('/')
+                    # Kludge to handle something like xX which should really be x/X
+                    if len(slashItems) == 1 and len(slashItems[0]) > 1 and len(slashItems[0]) < 10:
+                        s = slashItems[0]
+                        slashSet = set()
+                        if sum(1 if c.lower() == c else 0 for c in s) == len(s):
+                            for i in range(2 ** len(s)):
+                                slashSet.add("".join(c.upper() if (i & (1 << j)) != 0 else c for j,c in enumerate(s)))
+                            slashSet.remove(s)
+                            slashItems.extend(slashSet)
+                    #slashItems.sort(key=ducet.keyfn(ducetDict, 3))
+                    if simple:
+                        if not len(simplelist) or slashItems[0] != simplelist.pop(0):
+                            simple = False
+                    for s in slashItems:
+                        if currBase is not None:
+                            try:
+                                self[s] = CollElement(currBase, currLevel)
+                            except KeyError:
+                                continue
+                        currLevel = 3
+                        currBase = s
+                        alphabet.append(s)
+                    currLevel = 2
+        return alphabet if not simple else None
 
 
 class CollElement(object):
@@ -279,9 +386,9 @@ class CollElement(object):
         b = collations.get(self.base, None)
         if b is not None and b.order <= self.order:
             b.sortkey(collations, ducetDict, inc)
-            basekey = copy.deepcopy(b.shortkey)
+            basekey = b.shortkey.copy()
         else:
-            basekey = copy.deepcopy(self.key)
+            basekey = self.key.copy()
         if self.level < 4 :
             basekey[self.level-1][-1] += inc
         if not self.exp and b is not None and b.exp:
@@ -289,10 +396,10 @@ class CollElement(object):
         if self.exp:
             expkey = ducetSortKey(ducetDict, self.exp, extra=collations)
             if expkey > basekey:
-                self.shortkey = copy.deepcopy(expkey) + [1]
+                self.shortkey = expkey.copy() + SortKey([[1]])
             else:
-                self.shortkey = copy.deepcopy(basekey)
-            basekey = [basekey[i] + expkey[i] for i in range(3)]
+                self.shortkey = basekey.copy()
+            basekey.append(expkey)
         else:
             self.shortkey = basekey
         self.key = basekey

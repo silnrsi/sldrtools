@@ -227,7 +227,7 @@ def parse(s, normal=None):
     return res
 
 
-def parseitem(s, ind, lastitem, end):
+def parseitem(s, ind, lastitem, end, usegroups=False):
     '''Parses a single UnicodeSet or character. Doesn't handle property sets or variables, yet.'''
     if ind == end:
         return (end, lastitem, None)
@@ -267,12 +267,12 @@ def parseitem(s, ind, lastitem, end):
                     res = item - lastitem
                     res.negate(True)
                 else:
-                    res = item + lastitem
+                    res = item.union(lastitem)
                 lastitem = None
             elif op == '&' and lastitem and item:
                 if lastitem.negative:
                     if item.negative:
-                        res = item + lastitem
+                        res = item.union(lastitem)
                     else:
                         res = item - lastitem
                 elif item.negative:
@@ -316,10 +316,10 @@ def parseitem(s, ind, lastitem, end):
         except:
             res.add(simpleescs.get(x, x))
         ind += 2
-    elif s[ind] == '(':
+    elif usegroups and s[ind] == '(':
         res.startgroup = True
         ind += 1
-    elif s[ind] == ')':
+    elif usegroups and s[ind] == ')':
         res.endgroup = True
         ind += 1
     else:

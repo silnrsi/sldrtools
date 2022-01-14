@@ -32,7 +32,7 @@ import sys
 import codecs
 
 from icu import Char, Script, UCharCategory, UProperty, UScriptCode
-from icu import Normalizer2, UNormalizationMode2, UnicodeString
+from icu import Normalizer2, UNormalizationMode2, UnicodeString, Collator
 from collections import Counter
 
 try:
@@ -92,22 +92,16 @@ class UCD(object):
     @staticmethod
     def isnukta(char):
         """True if the character is a nukta."""
-        if Char.getCombiningClass(char) == 7:
-            return True
-        return False
+        return Char.getCombiningClass(char) == 7
 
     def is_always_combine(self, char):
         """True if Mark always combines (logically) with the base character."""
-        if self.isnukta(char):
-            return True
-        return False
+        return self.isnukta(char)
 
     @staticmethod
     def is_sometimes_combine(char):
         """True if Mark sometimes combines (logically) with the base character."""
-        if 0x0300 <= ord(char) <= 0x036F:
-            return True
-        return False
+        return 0x0300 <= ord(char) <= 0x036F
 
     def is_never_combine(self, char):
         """True if Mark never combines (logically) with the base character."""
@@ -120,16 +114,12 @@ class UCD(object):
     @staticmethod
     def is_zwnj(char):
         """True if the character is ZWNJ."""
-        if ord(char) == 0x200C:
-            return True
-        return False
+        return ord(char) == 0x200C
 
     @staticmethod
     def is_zwj(char):
         """True if the character is ZWJ."""
-        if ord(char) == 0x200D:
-            return True
-        return False
+        return ord(char) == 0x200D
 
     @staticmethod
     def is_vs(char):
@@ -305,6 +295,7 @@ class Exemplars(object):
         self.need_splitting = True
 
         self.unittest = False
+        self.collator = None
 
     def _set_main(self, ldml_exemplars):
         """Set LDML exemplars data for the main set."""
@@ -385,7 +376,7 @@ class Exemplars(object):
         if self.unittest:
             list_exemplars = ldml_exemplars.split()
         else:
-            list_exemplars = palaso.sldr.UnicodeSets.us2list(ldml_exemplars)
+            list_exemplars = sldr.UnicodeSets.us2list(ldml_exemplars)
         exemplars = set()
         for exemplar in list_exemplars:
             exemplar = self.ucd.normalize('NFD', exemplar)
@@ -397,8 +388,9 @@ class Exemplars(object):
         """Write exemplars to a string that can be written to a LDML formatted file."""
         if sort:
             # Exemplars mentioned in UTS #35 need to be sorted.
+            collator = self.collator if self.collator else Collator.createInstance()
             list_exemplars = list()
-            for exemplar in sorted(exemplars):
+            for exemplar in sorted(exemplars, key=collator.getSortKey):
                 list_exemplars.append(exemplar)
         else:
             # Graphemes should be sorted by frequency,
@@ -420,7 +412,7 @@ class Exemplars(object):
         if self.unittest:
             return ' '.join(list_nfc_exemplars_main_script)
         else:
-            return palaso.sldr.UnicodeSets.list2us(list_nfc_exemplars_main_script, self.ucd)
+            return sldr.UnicodeSets.list2us(list_nfc_exemplars_main_script, self.ucd)
 
     def analyze(self):
         """Analyze the found exemplars and classify them."""
@@ -620,10 +612,17 @@ class Exemplars(object):
 
         for exemplar in self.clusters.keys():
             occurs = self.clusters[exemplar]
-            if occurs > frequent:
+            if exemplar.text == u"\u0640":
+                self._auxiliary.add(exemplar.text)
+            elif occurs > frequent:
                 self._main.add(exemplar.text)
             else:
                 self._auxiliary.add(exemplar.text)
+
+    def normalize(self, form):
+        for a in ("main", "auxiliary", "index", "punctuation", "digits"):
+            s = set(self.ucd.normalize(form, x) for x in getattr(self, "_"+a))
+            setattr(self, "_"+a, s)
 
     def make_index(self):
         """Analyze the found exemplars for indices and classify them."""

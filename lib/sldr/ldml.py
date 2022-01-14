@@ -413,16 +413,17 @@ class Ldml(ETWriter):
         curr = None
         comments = []
 
-        if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
-            self.root = getattr(et, '_Element_Py', et.Element)('ldml')
-            self.root.document = self
-            self.default_draft = 'unconfirmed'
-            self._analyse()
-            self.normalise(self.root, usedrafts=usedrafts)
-            return
-        elif isinstance(fname, string_types):
-            self.fname = fname
-            fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
+        if fname is None or isinstance(fname, string_types):
+            if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
+                self.root = getattr(et, '_Element_Py', et.Element)('ldml')
+                self.root.document = self
+                self.default_draft = 'unconfirmed'
+                self._analyse()
+                self.normalise(self.root, usedrafts=usedrafts)
+                return
+            else:
+                self.fname = fname
+                fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
         else:
             fh = fname
         if hasattr(et, '_Element_Py'):
@@ -479,7 +480,7 @@ class Ldml(ETWriter):
             res.parent = parent
         return res
 
-    def addnode(self, parent, tag, attrib=None, alt=None, **attribs):
+    def addnode(self, parent, tag, attrib=None, alt=None, returnnew=False, **attribs):
         ''' Adds a node, keeping the best alternate at the front '''
         if attrib is not None:
             attrib = dict((k,v) for k,v in attrib.items() if v) # filter @x=""
@@ -499,7 +500,8 @@ class Ldml(ETWriter):
             if len(equivs):
                 if 'alt' not in e.attrib:
                     e.set('alt', alt)
-                return self._add_alt_leaf(equivs[0], e, default=e.get('draft', None), leaf=True, alt=alt)
+                newhead = self._add_alt_leaf(equivs[0], e, default=e.get('draft', None), leaf=True, alt=alt)
+                return e if returnnew else newhead
         parent.append(e)
         return e
 
@@ -884,6 +886,9 @@ class Ldml(ETWriter):
         ldraft = e.get('draft', None) if e is not None else None
         if ldraft is not None: return draftratings.get(ldraft, 5)
         return draftratings.get(default, draftratings[self.default_draft])
+
+    def draftnum(self, d):
+        return draftratings.get(d, draftratings[self.default_draft])
 
     def resolve_aliases(self, this=None, _cache=None):
         """ Go through resolving aliases to actual content nodes """
