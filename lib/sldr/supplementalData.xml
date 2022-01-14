@@ -2497,7 +2497,7 @@ XXX Code for transations where no currency is involved
 			<languagePopulation type="en" populationPercent="18"/>	<!--English-->
 			<languagePopulation type="rkt" literacyPercent="20" populationPercent="6.5" references="R1087"/>	<!--Rangpuri-->
 			<languagePopulation type="syl" literacyPercent="35" populationPercent="5"/>	<!--Sylheti-->
-			<languagePopulation type="rhg" populationPercent="0.52"/>	<!--Rohingya-->
+			<languagePopulation type="rhg" populationPercent="0.53"/>	<!--Rohingya-->
 			<languagePopulation type="ccp" populationPercent="0.22"/>	<!--Chakma-->
 			<languagePopulation type="my" populationPercent="0.21"/>	<!--Burmese-->
 			<languagePopulation type="grt" populationPercent="0.073"/>	<!--Garo-->
@@ -2573,8 +2573,8 @@ XXX Code for transations where no currency is involved
 			<languagePopulation type="es" populationPercent="0.036" references="R1315"/>	<!--Spanish-->
 			<languagePopulation type="kgp" populationPercent="0.024" references="R1325"/>	<!--Kaingang-->
 			<languagePopulation type="ko" populationPercent="0.021"/>	<!--Korean-->
+			<languagePopulation type="yrl" populationPercent="0.01" references="R1327"/>	<!--Nheengatu-->
 			<languagePopulation type="gub" populationPercent="0.0084"/>	<!--Guajajára-->
-			<languagePopulation type="yrl" populationPercent="0.0052"/>	<!--Nheengatu-->
 			<languagePopulation type="xav" populationPercent="0.0047"/>	<!--Xavánte-->
 		</territory>
 		<territory type="BS" gdp="12060000000" literacyPercent="95.6" population="337721">	<!--Bahamas-->
@@ -2739,6 +2739,7 @@ XXX Code for transations where no currency is involved
 		<territory type="CO" gdp="711600000000" literacyPercent="93.6" population="49084800">	<!--Colombia-->
 			<languagePopulation type="es" populationPercent="93" officialStatus="official" references="R1014"/>	<!--Spanish-->
 			<languagePopulation type="guc" populationPercent="0.27"/>	<!--Wayuu-->
+			<languagePopulation type="yrl" populationPercent="0.0061" references="R1327"/>	<!--Nheengatu-->
 		</territory>
 		<territory type="CP" gdp="42090" literacyPercent="99" population="1">	<!--Clipperton Island-->
 			<languagePopulation type="und" populationPercent="100" references="R1062"/>	<!--Unknown language-->
@@ -2971,7 +2972,7 @@ XXX Code for transations where no currency is involved
 			<languagePopulation type="ru" populationPercent="9" references="R1038"/>	<!--Russian-->
 			<languagePopulation type="hy" populationPercent="7" references="R1038"/>	<!--Armenian-->
 			<languagePopulation type="ab" populationPercent="2.2" officialStatus="official_regional"/>	<!--Abkhazian-->
-			<languagePopulation type="os" populationPercent="4.09" officialStatus="official_regional"/>	<!--Ossetic - per https://en.wikipedia.org/wiki/Ossetian_language -->
+			<languagePopulation type="os" populationPercent="2.2" officialStatus="official_regional"/>	<!--Ossetic-->
 			<languagePopulation type="ku" populationPercent="0.89"/>	<!--Kurdish-->
 		</territory>
 		<territory type="GF" gdp="1551000000" literacyPercent="83" population="199509">	<!--French Guiana-->
@@ -3499,7 +3500,7 @@ XXX Code for transations where no currency is involved
 			<languagePopulation type="my" populationPercent="64" officialStatus="official"/>	<!--Burmese-->
 			<languagePopulation type="shn" populationPercent="6.4"/>	<!--Shan-->
 			<languagePopulation type="kac" populationPercent="1.7"/>	<!--Kachin-->
-			<languagePopulation type="rhg" populationPercent="1.6"/>	<!--Rohingya-->
+			<languagePopulation type="rhg" populationPercent="1.7"/>	<!--Rohingya-->
 			<languagePopulation type="mnw" populationPercent="1.5"/>	<!--Mon-->
 			<languagePopulation type="kht" populationPercent="0.0075"/>	<!--Khamti-->
 		</territory>
@@ -4227,6 +4228,7 @@ XXX Code for transations where no currency is involved
 		</territory>
 		<territory type="VE" gdp="381600000000" literacyPercent="95.5" population="28644600">	<!--Venezuela-->
 			<languagePopulation type="es" populationPercent="82" officialStatus="official"/>	<!--Spanish-->
+			<languagePopulation type="yrl" populationPercent="0.007" references="R1327"/>	<!--Nheengatu-->
 		</territory>
 		<territory type="VG" gdp="500000000" literacyPercent="97.8" population="37381">	<!--British Virgin Islands-->
 			<languagePopulation type="en" populationPercent="98" officialStatus="official"/>	<!--English-->
@@ -4692,7 +4694,7 @@ XXX Code for transations where no currency is involved
 		<!-- The first workday of the week (after the weekend) is distinct, and can be determined as the day after the weekendEnd day. -->
           <firstDay day="mon"  territories="
 			001
-			AD AI AL AM AN AR AT AX AZ
+			AD AI AL AM AN AR AT AU AX AZ
 			BA BE BG BM BN BY
 			CH CL CM CR CY CZ
 			DE DK
@@ -4716,7 +4718,7 @@ XXX Code for transations where no currency is involved
 		<firstDay day="fri" territories="MV"/>
 		<firstDay day="sat" territories="AE AF BH DJ DZ EG IQ IR JO KW LY OM QA SD SY"/>
           <firstDay day="sun"  territories="
-			AG AS AU
+			AG AS
 			BD BR BS BT BW BZ
 			CA CN CO
 			DM DO
@@ -5311,7 +5313,7 @@ XXX Code for transations where no currency is involved
 
 	<parentLocales>
 		<parentLocale parent="root" locales="az_Arab az_Cyrl bal_Latn blt_Latn bm_Nkoo bs_Cyrl byn_Latn cu_Glag dje_Arab dyo_Arab en_Dsrt en_Shaw ff_Adlm ff_Arab ha_Arab hi_Latn iu_Latn kk_Arab ks_Deva ku_Arab ky_Arab ky_Latn ml_Arab mn_Mong mni_Mtei ms_Arab pa_Arab sat_Deva sd_Deva sd_Khoj sd_Sind shi_Latn so_Arab sr_Latn sw_Arab tg_Arab ug_Cyrl uz_Arab uz_Cyrl vai_Latn wo_Arab yo_Arab yue_Hans zh_Hant"/>
-		<parentLocale parent="en_001" locales="en_150 en_AG en_AI en_AU en_BB en_BM en_BS en_BW en_BZ en_CA en_CC en_CK en_CM en_CX en_CY en_DG en_DM en_ER en_FJ en_FK en_FM en_GB en_GD en_GG en_GH en_GI en_GM en_GY en_HK en_IE en_IL en_IM en_IN en_IO en_JE en_JM en_KE en_KI en_KN en_KY en_LC en_LR en_LS en_MG en_MO en_MS en_MT en_MU en_MW en_MY en_NA en_NF en_NG en_NR en_NU en_NZ en_PG en_PH en_PK en_PN en_PW en_RW en_SB en_SC en_SD en_SG en_SH en_SL en_SS en_SX en_SZ en_TC en_TK en_TO en_TT en_TV en_TZ en_UG en_VC en_VG en_VU en_WS en_ZA en_ZM en_ZW"/>
+		<parentLocale parent="en_001" locales="en_150 en_AG en_AI en_AU en_BB en_BM en_BS en_BW en_BZ en_CC en_CK en_CM en_CX en_CY en_DG en_DM en_ER en_FJ en_FK en_FM en_GB en_GD en_GG en_GH en_GI en_GM en_GY en_HK en_IE en_IL en_IM en_IN en_IO en_JE en_JM en_KE en_KI en_KN en_KY en_LC en_LR en_LS en_MG en_MO en_MS en_MT en_MU en_MW en_MY en_NA en_NF en_NG en_NR en_NU en_NZ en_PG en_PK en_PN en_PW en_RW en_SB en_SC en_SD en_SG en_SH en_SL en_SS en_SX en_SZ en_TC en_TK en_TO en_TT en_TV en_TZ en_UG en_VC en_VG en_VU en_WS en_ZA en_ZM en_ZW"/>
 		<parentLocale parent="en_150" locales="en_AT en_BE en_CH en_DE en_DK en_FI en_NL en_SE en_SI"/>
 		<parentLocale parent="es_419" locales="es_AR es_BO es_BR es_BZ es_CL es_CO es_CR es_CU es_DO es_EC es_GT es_HN es_MX es_NI es_PA es_PE es_PR es_PY es_SV es_US es_UY es_VE"/>
 		<parentLocale parent="no" locales="nb nn"/>
@@ -5647,5 +5649,6 @@ XXX Code for transations where no currency is involved
 		<reference type="R1324" uri="http://2001.ukrcensus.gov.ua/eng/results/general/nationality/">[missing]</reference>
 		<reference type="R1325" uri="http://www.portalkaingang.org/index_povo_1default.htm">[missing]</reference>
 		<reference type="R1326" uri="https://www.ethnologue.com/language/osa">[missing]</reference>
+		<reference type="R1327" uri="https://pt.wikipedia.org/wiki/Nheengatu">[missing]</reference>
 	</references>
 </supplementalData>

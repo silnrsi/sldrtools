@@ -3,7 +3,7 @@
 <!--
 Copyright © 1991-2021 Unicode, Inc.
 For terms of use, see http://www.unicode.org/copyright.html
-Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
+SPDX-License-Identifier: Unicode-DFS-2016
 CLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)
 -->
 <!--
@@ -340,6 +340,8 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<!--{ Buhid; ?; ? } => { Buhid; Latin; Philippines }-->
 		<likelySubtag from="bkv" to="bkv_Latn_ZZ"/>
 		<!--{ Bekwarra; ?; ? } => { Bekwarra; Latin; Unknown Region }-->
+		<likelySubtag from="blg" to="blg_Latn_MY"/>
+		<!--{ Balau; ?; ? } => { Balau; Latin; Malaysia }-->
 		<likelySubtag from="blt" to="blt_Tavt_VN"/>
 		<!--{ Tai Dam; ?; ? } => { Tai Dam; Tai Viet; Vietnam }-->
 		<likelySubtag from="bm" to="bm_Latn_ML"/>
@@ -1120,6 +1122,8 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<!--{ Kamba; ?; ? } => { Kamba; Latin; Kenya }-->
 		<likelySubtag from="kao" to="kao_Latn_ML"/>
 		<!--{ Xaasongaxango; ?; ? } => { Xaasongaxango; Latin; Mali }-->
+		<likelySubtag from="kaw" to="kaw_Kawi_ID"/>
+		<!--{ Kawi; ?; ? } => { Kawi; Kawi; Indonesia }-->
 		<likelySubtag from="kbd" to="kbd_Cyrl_RU"/>
 		<!--{ Kabardian; ?; ? } => { Kabardian; Cyrillic; Russia }-->
 		<likelySubtag from="kbm" to="kbm_Latn_ZZ"/>
@@ -3382,6 +3386,10 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<!--{ ?; Chorasmian; ? } => { Chorasmian; Chorasmian; Uzbekistan }-->
 		<likelySubtag from="und_Copt" to="cop_Copt_EG"/>
 		<!--{ ?; Coptic; ? } => { Coptic; Coptic; Egypt }-->
+		<likelySubtag from="und_Cpmn" to="und_Cpmn_CY"/>
+		<!--{ ?; Cypro-Minoan; ? } => { ?; Cypro-Minoan; Cyprus }-->
+		<likelySubtag from="und_Cpmn_CY" to="und_Cpmn_CY"/>
+		<!--{ ?; Cypro-Minoan; Cyprus } => { ?; Cypro-Minoan; Cyprus }-->
 		<likelySubtag from="und_Cprt" to="grc_Cprt_CY"/>
 		<!--{ ?; Cypriot; ? } => { Ancient Greek; Cypriot; Cyprus }-->
 		<likelySubtag from="und_Cyrl" to="ru_Cyrl_RU"/>
@@ -3494,6 +3502,8 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<!--{ ?; Kayah Li; ? } => { Eastern Kayah; Kayah Li; Myanmar (Burma) }-->
 		<likelySubtag from="und_Kana" to="ja_Kana_JP"/>
 		<!--{ ?; Katakana; ? } => { Japanese; Katakana; Japan }-->
+		<likelySubtag from="und_Kawi" to="kaw_Kawi_ID"/>
+		<!--{ ?; Kawi; ? } => { Kawi; Kawi; Indonesia }-->
 		<likelySubtag from="und_Khar" to="pra_Khar_PK"/>
 		<!--{ ?; Kharoshthi; ? } => { Prakrit languages; Kharoshthi; Pakistan }-->
 		<likelySubtag from="und_Khmr" to="km_Khmr_KH"/>
@@ -3600,6 +3610,8 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<!--{ ?; Myanmar; India } => { Khamti; Myanmar; India }-->
 		<likelySubtag from="und_Mymr_TH" to="mnw_Mymr_TH"/>
 		<!--{ ?; Myanmar; Thailand } => { Mon; Myanmar; Thailand }-->
+		<likelySubtag from="und_Nagm" to="unr_Nagm_IN"/>
+		<!--{ ?; Nag Mundari; ? } => { Mundari; Nag Mundari; India }-->
 		<likelySubtag from="und_Nand" to="sa_Nand_IN"/>
 		<!--{ ?; Nandinagari; ? } => { Sanskrit; Nandinagari; India }-->
 		<likelySubtag from="und_Narb" to="xna_Narb_SA"/>
@@ -3647,7 +3659,7 @@ not be patched by hand, as any changes made in that fashion may be lost.
 		<likelySubtag from="und_Rjng" to="rej_Rjng_ID"/>
 		<!--{ ?; Rejang; ? } => { Rejang; Rejang; Indonesia }-->
 		<likelySubtag from="und_Rohg" to="rhg_Rohg_MM"/>
-		<!--{ ?; Hanifi Rohingya; ? } => { Rohingya; Hanifi Rohingya; Myanmar (Burma) }-->
+		<!--{ ?; Hanifi; ? } => { Rohingya; Hanifi; Myanmar (Burma) }-->
 		<likelySubtag from="und_Runr" to="non_Runr_SE"/>
 		<!--{ ?; Runic; ? } => { Old Norse; Runic; Sweden }-->
 		<likelySubtag from="und_Samr" to="smp_Samr_IL"/>
