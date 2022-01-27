@@ -1,0 +1,68 @@
+#!/usr/bin/python3
+''' Reads zone.tab and generates an ordered list of timezones with sort key
+    information as csv'''
+
+import argparse, re
+
+def latlongdeg(sign, deg, mins, secs):
+    res = float(sign+deg)
+    res += float(mins) / 60.
+    if secs is not None:
+        res += float(secs) / 3600.
+    return res
+
+fixzones = {
+    "America/Atikokan": "America/Coral_Harbour",
+    "America/Argentina/Buenos_Aires": "America/Buenos_Aires",
+    "America/Argentina/Catamarca": "America/Catamarca",
+    "America/Argentina/Cordoba": "America/Cordoba",
+    "America/Argentina/Jujuy": "America/Jujuy",
+    "America/Argentina/Mendoza": "America/Mendoza",
+    "America/Nuuk": "America/Godthab",
+    "America/Kentucky/Louisville": "America/Louisville",
+    "America/Indiana/Indianapolis": "America/Indianapolis",
+    "Africa/Asmara": "Africa/Asmera",
+    "Atlantic/Faroe": "Atlantic/Faeroe",
+    "Asia/Kolkata": "Asia/Calcutta",
+    "Asia/Ho_Chi_Minh": "Asia/Saigon",
+    "Asia/Yangon": "Asia/Rangoon",
+    "Asia/Kathmandu": "Asia/Katmandu",
+    "Pacific/Pohnpei": "Pacific/Ponape",
+    "Pacific/Chuuk": "Pacific/Truk",
+    "Pacific/Honolulu": "Pacific/Johnston"
+}
+
+parser = argparse.ArgumentParser()
+parser.add_argument("infile", help="Input zone.tab")
+parser.add_argument("outfile", help="Output tzones.csv")
+args = parser.parse_args()
+
+results = {}
+with open(args.infile) as inf:
+    for l in inf.readlines():
+        s = re.sub(r"#.*$", "", l.strip())
+        bits = s.split("\t")
+        if len(bits) < 3:
+            continue
+        key = fixzones.get(bits[2], bits[2])
+        row = [bits[0]]
+        m = re.match(r"^([+-])(\d\d\d?)(\d\d)(\d\d)?([+-])(\d\d\d?)(\d\d)(\d\d)?", bits[1])
+        if m:
+            row.append(latlongdeg(*m.group(*range(1,5))))
+            row.append(latlongdeg(*m.group(*range(5,9))))
+        results[key] = row
+for i in range(-14, 13):
+    key = "Etc/GMT{:+d}".format(i)
+    row = ["001", 0.]
+    long = i * 15.
+    if long <= 180:
+        long += 360
+    row.append(long)
+    results[key] = row
+for a in ("Unknown", "UTC"):
+    results["Etc/"+a] = ["001", 0., 0.]
+
+with open(args.outfile, "w") as outf:
+    for k, v in sorted(results.items(), key=lambda x:(x[1], x[0])):
+        outf.write('{0}, {1[0]}, {1[1]:g}, {1[2]:g}\n'.format(k, v))
+

@@ -294,6 +294,7 @@ class Ldml(ETWriter):
     def ReadMetadata(cls, fname = None):
         """ Reads supplementalMetadata.xml from CLDR to get useful structural information on LDML"""
         cls.ReadDTD()
+        cls.ReadTZData()
         if fname is None:
             fname = os.path.join(os.path.dirname(__file__), 'supplementalMetadata.xml')
         doc = et.parse(fname)
@@ -351,6 +352,7 @@ class Ldml(ETWriter):
         cls.attribvals = {}
         attribCount = {}
         cls.maxEls = 0
+        cls.blocks = []
         def procmodel(name, nodes, cls, elementCount):
             for n in nodes:
                 if n[2] is not None:
@@ -394,7 +396,8 @@ class Ldml(ETWriter):
             if curAttrib is not None and (m.group(1) == "METADATA" or m.group(1) == "VALUE"):
                 cls.keyContexts[curEl].remove(curAttrib)
                 cls.nonkeyContexts.setdefault(curEl, set()).add(curAttrib)
-            
+            elif m.group(1) == "BLOCK":
+                cls.blocks.append(curEl)
         parser = xml.parsers.expat.ParserCreate()
         parser.ElementDeclHandler = elementDecl
         parser.AttlistDeclHandler = attlistDecl
@@ -403,6 +406,20 @@ class Ldml(ETWriter):
         parsetext = "<?xml version='1.0'?>\n<!DOCTYPE LDML [\n" + ldmltext + "]>\n"
         parser.Parse(parsetext)
         cls.maxAts = max(attribCount.values()) + 1
+
+    @classmethod
+    def ReadTZData(cls, fname=None):
+        if fname is None:
+            fname = os.path.join(os.path.dirname(__file__), 'tzones.csv')
+        vals = []
+        with open(fname) as inf:
+            for l in inf.readlines():
+                l = re.sub(r"#.*$", r"", l.strip())
+                m = re.split(r"\s*,\s*", l)
+                if len(m):
+                    vals.append(m[0])
+        ndig = "{{:0{}d}}".format(int(log10(len(vals)) + 1.))
+        cls.attribvals.setdefault('zone', {})['type'] = {v:ndig.format(i+1) for i,v in enumerate(vals)}
 
     def __init__(self, fname, usedrafts=True, uparrows=False):
         if not hasattr(self, 'elementOrder'):
