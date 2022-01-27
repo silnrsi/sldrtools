@@ -61,7 +61,7 @@ class LdmlMerge(Ldml):
         if this == None: this = self.root
         other = getattr(other, 'root', other)
         # if empty elements, test .text and all the attributes
-        if not len(other) and not len(this):
+        if (not len(other) and not len(this)) or this.tag in self.blocks:
             return (other.contentHash == this.contentHash)
         for o in other:
             for t in filter(lambda x: x.attrHash == o.attrHash, this):
