@@ -208,6 +208,9 @@ class LangTag(object) :
         if self.region is not None:
             rs.append(self.region)
         srs = [[s] + [r] for s in ss for r in rs if s is not None or r is not None or self.hideboth]
+        # xxx-Brai-RE isn't synonymous for xx-RE
+        #if self.script == "Brai" and self.region is not None:
+        #    srs = [x for x in srs if x[0] == None and x[1] == self.region]
         extravars = []
         if self.variants is not None :
             varset = set(self.variants)
