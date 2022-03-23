@@ -27,10 +27,8 @@ The LDML_entry.ods file (sldrtools/data) is a LibreOffice calc spreadsheet desig
 
 For any of these options
 
-- you may delete the "Design notes" sheet 
-- you may use the "Notes" sheet in any way you wish to discuss options, track decisions, etc.
-
-Be sure to fill in the Contributor information, and the Language, Script and Region codes.
+- You may use the "Notes" sheet in any way you wish to discuss options, track decisions, etc.
+- Be sure to fill in the Contributor information, and the Language, Script and Region codes.
 
 ## Generation of LDML
 
