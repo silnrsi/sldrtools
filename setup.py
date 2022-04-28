@@ -24,5 +24,6 @@ setup(name='sldr',
                              'likelySubtags.xml',
                              'sil.dtd',
                              'supplementalData.xml',
-                             'supplementalMetadata.xml']}
+                             'supplementalMetadata.xml',
+			     'tzones.csv']}
       )
