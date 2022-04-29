@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import argparse, os, re, datetime, sys, csv
 from sldr.ldml import Ldml, getldml

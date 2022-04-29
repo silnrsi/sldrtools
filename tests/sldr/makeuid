@@ -1,7 +1,4 @@
-#!/usr/bin/python
-
-# Py2 and Py3 compatibility
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import time, struct, base64, random
 
