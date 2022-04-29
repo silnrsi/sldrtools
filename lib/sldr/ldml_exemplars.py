@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -401,7 +401,7 @@ class Exemplars(object):
         list_nfc_exemplars = map(self.ucd.normalize_nfc, list_exemplars)
 
         # Ignore exemplars not of most common script found in the data.
-        list_nfc_exemplars_main_script = list()
+        list_nfc_exemplars_main_script = []
         for exemplar in list_nfc_exemplars:
             char = exemplar[0] # only look at the first character in an exemplar.
             script = Script.getScript(char)
@@ -455,7 +455,7 @@ class Exemplars(object):
         """Save the list of found graphemes."""
         for exemplar, count in self.clusters.most_common():
             self._graphemes.append(exemplar.text)
-            self._frequency.append(u'{}:{}'.format(exemplar.text, count))
+            self._frequency.append('{}:{}'.format(exemplar.text, count))
         self._raw_clusters = Counter(self.clusters)
 
     def count_marks(self):
@@ -612,7 +612,7 @@ class Exemplars(object):
 
         for exemplar in self.clusters.keys():
             occurs = self.clusters[exemplar]
-            if exemplar.text == u"\u0640":
+            if exemplar.text == "\u0640":
                 self._auxiliary.add(exemplar.text)
             elif occurs > frequent:
                 self._main.add(exemplar.text)

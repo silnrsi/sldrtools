@@ -4,12 +4,6 @@ import argparse, sys, re
 from xml.etree import ElementTree as et
 from sldr.py3xmlparser import XMLParser, TreeBuilder
 
-try:
-    basestring
-    string_types = basestring
-except NameError:
-    string_types = str
-
 _elementprotect = {
     '&': '&amp;',
     '<': '&lt;',
@@ -42,7 +36,7 @@ class ETWriter(object):
             self.root.document = self
             self.default_draft = 'unconfirmed'
             return
-        elif isinstance(fname, string_types):
+        elif isinstance(fname, str):
             self.fname = fname
             fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
         else:
@@ -121,7 +115,7 @@ class ETWriter(object):
 
     def _protect(self, txt, base=_attribprotect):
         ''' Turn key characters into entities'''
-        return re.sub(u'['+u"".join(base.keys())+u"]", lambda m: base[m.group(0)], txt)
+        return re.sub('['+"".join(base.keys())+"]", lambda m: base[m.group(0)], txt)
 
     def _nsprotectattribs(self, attribs, localattribs, namespaces):
         ''' Prepare attributes for output by protecting, converting ns: form
@@ -166,15 +160,15 @@ class ETWriter(object):
                     localattribs['xmlns:'+lq] = lns
         self._nsprotectattribs(getattr(base, 'attrib', None), localattribs, namespaces)
         for c in getattr(base, 'comments', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
-        write(u'{}<{}'.format(indent, tag))
+            write('{}<!--{}-->\n'.format(indent, c))
+        write('{}<{}'.format(indent, tag))
         if len(localattribs):
             def getorder(x):
                 return self.attributeOrder.get(tag, {}).get(x, self.maxAts)
             def cmpattrib(x, y):
                 return cmp(getorder(x), getorder(y)) or cmp(x, y)
             for k in self._sortedattrs(base, localattribs):
-                write(u' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
+                write(' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
         if len(base):
             write('>\n')
             for b in base:
@@ -185,11 +179,11 @@ class ETWriter(object):
                 t = self._protect(base.text.replace('\n', '\n' + indent), base=_elementprotect)
             else:
                 t = "<![CDATA[\n" + self.indent + indent + base.text.replace('\n', '\n' + self.indent + indent) + "\n" + indent + "]]>"
-            write(u'>{}</{}>\n'.format(t, tag))
+            write('>{}</{}>\n'.format(t, tag))
         else:
             write('/>\n')
         for c in getattr(base, 'commentsafter', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
+            write('{}<!--{}-->\n'.format(indent, c))
 
     def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
@@ -205,7 +199,7 @@ class ETWriter(object):
     def addnode(self, parent, tag, **kw):
         """ Appends a new node to a parent, returning the new node.
             Empty (None) attributes are stripped"""
-        kw = dict((k, v) for k, v in kw.items() if v is not None)
+        kw = {k: v for k, v in kw.items() if v is not None}
         return et.SubElement(parent, tag, **kw)
 
     def _reverselocalns(self, tag):
@@ -222,7 +216,7 @@ class ETWriter(object):
     def subelement(self, parent, tag, **kw):
         """ Create a new SubElement and do localns replacement as in ns:tag -> {url}tag"""
         tag = self._reverselocalns(tag)
-        kw = dict((self._reverselocalns(k), v) for k, v in kw.items() if v is not None)
+        kw = {self._reverselocalns(k): v for k, v in kw.items() if v is not None}
         return et.SubElement(parent, tag, **k)
 
 parser = argparse.ArgumentParser()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse, sys
 from xml.etree import ElementTree as et
@@ -88,10 +88,10 @@ for i, e in enumerate(doc.findall('.//event')):
     if t is None: continue
     test = t.text
     res = kbd.process(key, modifiers)
-    if unicode(res) != test:
-        print(u"Failed test {}: {} should be {}".format(i+1, res, test))
+    if str(res) != test:
+        print("Failed test {}: {} should be {}".format(i+1, res, test))
         if args.usvs:
-            print(" ".join("U+{:04X}".format(ord(x)) for x in unicode(res)) + " should be " + \
+            print(" ".join("U+{:04X}".format(ord(x)) for x in str(res)) + " should be " + \
                   " ".join("U+{:04X}".format(ord(x)) for x in test))
         errors += 1
 sys.exit(errors)

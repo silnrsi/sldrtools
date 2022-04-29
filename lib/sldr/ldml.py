@@ -1,7 +1,4 @@
 # -*- coding: utf-8
-
-from __future__ import print_function
-
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -28,18 +25,13 @@ from __future__ import print_function
 
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
+import itertools
 import re, os, codecs
 import xml.parsers.expat
 import functools
 from math import log10
-#from six import string_types
 from .py3xmlparser import XMLParser, TreeBuilder
 
-try:
-    basestring
-    string_types = basestring
-except NameError:
-    string_types = str
 
 def iterate_files(root, ext=".xml"):
     """ Iterate a directory and subdirectories finding files with given extension """
@@ -49,18 +41,13 @@ def iterate_files(root, ext=".xml"):
 
 def getldml(loc, indirs):
     """ Given a langtag and list of root directories, seach for an LDML file and return the object """
-    foundit = False
     for p in (".", loc[0].lower()):
         for i in indirs:
             filep = os.path.join(i, p, loc.replace("-", "_")+".xml")
             if os.path.exists(filep):
-                foundit = True
-                break
-        if foundit:
-            break
-    else:
-        return None
-    return Ldml(filep)
+                return Ldml(filep)
+    return None
+    
 
 _elementprotect = {
     '&': '&amp;',
@@ -99,6 +86,7 @@ class ETWriter(object):
 
     nscount = 0
     indent = "\t"
+    maxAts = None
 
     def __init__(self, et, namespaces = None, attributeOrder = {}, takesCData = set()):
         self.root = et
@@ -120,11 +108,11 @@ class ETWriter(object):
                 self.nscount += 1
                 return (localname, 'ns' + str(self.nscount), ns)
         else:
-            return (tag, None, None)
+            return (tag, '', None)
 
     def _protect(self, txt, base=_attribprotect):
         ''' Turn key characters into entities'''
-        return re.sub(u'['+u"".join(base.keys())+u"]", lambda m: base[m.group(0)], txt)
+        return re.sub('['+"".join(base.keys())+"]", lambda m: base[m.group(0)], txt)
 
     def _nsprotectattribs(self, attribs, localattribs, namespaces):
         ''' Prepare attributes for output by protecting, converting ns: form
@@ -165,19 +153,19 @@ class ETWriter(object):
             for c in base:
                 (lt, lq, lns) = self._localisens(c.tag)
                 if lns and lns not in namespaces:
-                    namespaces[lns] = q
+                    namespaces[lns] = q # TODO: Confirm if this really should be q or is a typo for lq
                     localattribs['xmlns:'+lq] = lns
         self._nsprotectattribs(getattr(base, 'attrib', None), localattribs, namespaces)
         for c in getattr(base, 'comments', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
-        write(u'{}<{}'.format(indent, tag))
+            write('{}<!--{}-->\n'.format(indent, c))
+        write('{}<{}'.format(indent, tag))
         if len(localattribs):
             def getorder(x):
                 return self.attributeOrder.get(tag, {}).get(x, self.maxAts)
             def cmpattrib(x, y):
                 return cmp(getorder(x), getorder(y)) or cmp(x, y)
             for k in self._sortedattrs(base, localattribs):
-                write(u' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
+                write(' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
         if len(base):
             write('>\n')
             for b in base:
@@ -188,11 +176,11 @@ class ETWriter(object):
                 t = self._protect(base.text.replace('\n', '\n' + indent), base=_elementprotect)
             else:
                 t = "<![CDATA[\n\t" + indent + base.text.replace('\n', '\n\t' + indent) + "\n" + indent + "]]>"
-            write(u'>{}</{}>\n'.format(t, tag))
+            write('>{}</{}>\n'.format(t, tag))
         else:
             write('/>\n')
         for c in getattr(base, 'commentsafter', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
+            write('{}<!--{}-->\n'.format(indent, c))
 
     def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
@@ -208,7 +196,7 @@ class ETWriter(object):
     def addnode(self, parent, tag, **kw):
         """ Appends a new node to a parent, returning the new node.
             Empty (None) attributes are stripped"""
-        kw = dict((k, v) for k, v in kw.items() if v is not None)
+        kw = {k: v for k, v in kw.items() if v is not None}
         return et.SubElement(parent, tag, **kw)
 
     def _reverselocalns(self, tag):
@@ -225,7 +213,7 @@ class ETWriter(object):
     def subelement(self, parent, tag, **kw):
         """ Create a new SubElement and do localns replacement as in ns:tag -> {url}tag"""
         tag = self._reverselocalns(tag)
-        kw = dict((self._reverselocalns(k), v) for k, v in kw.items() if v is not None)
+        kw = {self._reverselocalns(k): v for k, v in kw.items() if v is not None}
         return et.SubElement(parent, tag, **k)
 
 
@@ -236,7 +224,7 @@ def etwrite(et, write, topns = True, namespaces = None):
     base.serialize_xml(write, topns = topns)
     
 _alldrafts = ('approved', 'contributed', 'provisional', 'unconfirmed', 'tentative', 'generated', 'suspect')
-draftratings = dict(map(lambda x: (x[1], x[0]), enumerate(_alldrafts)))
+draftratings = {v:i for i,v in enumerate(_alldrafts)}
 
 class _minhash(object):
     ''' Hash class that can hash vectors. Also supports minimal hashing with hamming distance.'''
@@ -259,8 +247,9 @@ class _minhash(object):
         return self.hashed
 
     def update(self, *vec):
-        h = map(self.hasher, vec)
-        if self.minhash is not None: map(self._minhashupdate, h)
+        h = [self.hasher(x) for x in vec]
+        if self.minhash is not None:
+            for x in h: self._minhashupdate(h)
         self.hashed = functools.reduce(lambda x,y:x * 1000003 + y, h, self.hashed) & self._mask
 
     def merge(self, aminh):
@@ -430,7 +419,7 @@ class Ldml(ETWriter):
         curr = None
         comments = []
 
-        if fname is None or isinstance(fname, string_types):
+        if fname is None or isinstance(fname, str):
             if fname is None or not os.path.exists(fname) or not os.path.getsize(fname):
                 self.root = getattr(et, '_Element_Py', et.Element)('ldml')
                 self.root.document = self
@@ -478,7 +467,7 @@ class Ldml(ETWriter):
                     comments = []
                 curr = getattr(elem, 'parent', None)
                 if not uparrows:
-                    if elem.text == u"↑↑↑" or \
+                    if elem.text == "↑↑↑" or \
                                 (getattr(elem, 'hasdeletedchild', False) and len(elem) == 0):
                         curr.remove(elem)
                         curr.hasdeletedchild = True
@@ -500,7 +489,7 @@ class Ldml(ETWriter):
     def addnode(self, parent, tag, attrib=None, alt=None, returnnew=False, **attribs):
         ''' Adds a node, keeping the best alternate at the front '''
         if attrib is not None:
-            attrib = dict((k,v) for k,v in attrib.items() if v) # filter @x=""
+            attrib = {k:v for k,v in attrib.items() if v} # filter @x=""
         else:
             attrib = {}
         attrib.update(attribs)
@@ -539,6 +528,7 @@ class Ldml(ETWriter):
                     return v
             target.alternates[alt] = origin
             if hasattr(origin, 'alternates'):
+                assert(id(target) != id(origin))
                 for k, v in origin.alternates.items():
                     if k not in target.alternates or \
                             (self.get_draft(v, default) > self.get_draft(target.alternates[k], default)):
@@ -707,7 +697,7 @@ class Ldml(ETWriter):
             newcurr = []
             for job in curr:
                 extras = [] if draft is None or not hasattr(job, 'alternates') else job.alternates.keys()
-                for j in [job] + extras:
+                for j in itertools.chain([job], extras):
                     if j.text == text:
                         if draft is not None and self.get_draft(j) > draftratings.get(draft, len(draftratings)):
                             self.change_draft(j, draft, alt=alt)
@@ -867,7 +857,7 @@ class Ldml(ETWriter):
         if len(res):
             res += "/" 
         tests = [(k, n.get(k)) for k in self._sortedattrs(n) if k in distkeys]
-        res += n.tag + u"".join(u'[@{}="{}"]'.format(*x) for x in tests)
+        res += n.tag + "".join('[@{}="{}"]'.format(*x) for x in tests)
         return res
 
     def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}, nouid=True):

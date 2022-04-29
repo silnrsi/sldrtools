@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 __doc__ = 'read LO .ods sheet (or TSV file) and generate LDML'
 __url__ = 'http://github.com/silnrsi/sldrtools'
 __copyright__ = 'Copyright (c) 2019-2020, SIL International  (http://www.sil.org)'
@@ -6,6 +6,7 @@ __license__ = 'Released under the MIT License (http://opensource.org/licenses/MI
 __author__ = 'David Rowe'
 
 import argparse
+import sys
 from sldr.sheet import Sheet
 
 # define command line arguments 

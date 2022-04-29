@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -174,7 +174,7 @@ def doit(l) :
     if lang is not None :
         if not hasattr(lang, 'comments') or len(lang.comments) == 0 :
             i = lang.get('type')
-            lang.comments = [u' name.en({0})="{1}" '.format(i, langmap.get(i, 'Unknown'))]
+            lang.comments = [' name.en({0})="{1}" '.format(i, langmap.get(i, 'Unknown'))]
     curr.normalise()
     outfh = codecs.open(os.path.join(args.outdir, os.path.basename(l)), "w", encoding="utf-8")
     curr.serialize_xml(outfh.write)

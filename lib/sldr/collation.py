@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-
-# Py2 and Py3 compatibility
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import re, copy, os
 import unicodedata as ud
@@ -16,7 +13,7 @@ def escape(s, allchars=False):
     lastbase = False
     for k in s:
         if k in escs:
-            res += u"\\" + k
+            res += "\\" + k
             continue
         elif k == "'":
             res += k + k
@@ -28,16 +25,16 @@ def escape(s, allchars=False):
             lastbase = True
             res += k
         elif allchars and i > 0xFFFF:
-            res += u'\\U' + ("00000000" + (hex(i)[2:]))[-8:]
+            res += '\\U' + ("00000000" + (hex(i)[2:]))[-8:]
         elif allchars:
-            res += u'\\u' + ("0000" + (hex(i)[2:]))[-4:]
+            res += '\\u' + ("0000" + (hex(i)[2:]))[-4:]
         else:
             res += k
     return res
 
 def unescape(s):
     '''Parse tailoring escaped characters into normal Unicode'''
-    s = re.sub(r'(?:\\U([0-9A-F]{8})|\\u([0-9A-F]{4}))', lambda m:unichr(int(m.group(m.lastindex), 16)), s, re.I)
+    s = re.sub(r'(?:\\U([0-9A-F]{8})|\\u([0-9A-F]{4}))', lambda m: chr(int(m.group(m.lastindex), 16)), s, re.I)
     s = re.sub(r'\\(.)', r'\1', s)
     s = s.replace("''", "'")
     return s
@@ -104,7 +101,7 @@ def readDucet(path="") :
                 parts = contentLine.split(';')
                 if len(parts) != 2 or parts[0].strip().startswith("@"):
                     continue
-                key = u"".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
+                key = "".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
                 vals = valre.findall(parts[1])
                 result[key] = tuple(tuple(int(x, 16) for x in v) for v in vals)
     except :
@@ -200,7 +197,7 @@ class Collation(dict):
 
     def __setitem__(self, key, val):
         if key in self:
-            raise KeyError(u"key {} already exists in collation with value {}".format(key, self[key]))
+            raise KeyError("key {} already exists in collation with value {}".format(key, self[key]))
         dict.__setitem__(self, key, val)
 
     def _setSortKeys(self):
@@ -361,9 +358,9 @@ class CollElement(object):
         self.order = (0,)
 
     def __repr__(self):
-        res = u">>>>"[:self.level] + self.base
+        res = ">>>>"[:self.level] + self.base
         if self.exp:
-            return repr(res + u"/" + self.exp)
+            return repr(res + "/" + self.exp)
         else:
             return repr(res)
 

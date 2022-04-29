@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from setuptools import setup
 from glob import glob
 
 packages = ['sldr']
 
-scripts = set(filter(lambda x: x.rfind(".") == -1, glob('scripts/*')))
+scripts = {x for x in glob('scripts/*') if x.rfind(".") == -1}
 
 setup(name='sldr',
       version='0.7.5',
