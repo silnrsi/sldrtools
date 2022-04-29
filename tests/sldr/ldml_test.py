@@ -1,10 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest, sys, os
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 try:
     from sldr.ldml import Ldml, draftratings
@@ -16,7 +13,7 @@ except ImportError:
 class LDMLTests(unittest.TestCase):
 
     def setUp(self):
-        self.tf = u'''<?xml version="1.0" encoding="utf-8"?>
+        self.tf = '''<?xml version="1.0" encoding="utf-8"?>
 <ldml xmlns:sil="urn://www.sil.org/ldml/0.1">
 	<identity>
 		<special>
@@ -32,7 +29,7 @@ class LDMLTests(unittest.TestCase):
         self.ldml = Ldml(tf)
         self.tpath ='characters/exemplarCharacters[@type=""]'
         self.tstring = "[" + " ".join("default") + "]"
-        self.teststrs = dict((x, "[" + " ".join(x) + "]") for x in draftratings.keys())
+        self.teststrs = {x: "[" + " ".join(x) + "]" for x in draftratings.keys()}
 
     def tearDown(self):
         if '-v' in sys.argv:

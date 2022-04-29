@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -53,23 +53,23 @@ class UnicodeSetsTests(unittest.TestCase):
 
     def test_braces(self):
         """Multiple characters sequences need braces around them."""
-        self.assertEqual(u'[n {ng}]', self.list2us_helper(u'n ng'))
+        self.assertEqual('[n {ng}]', self.list2us_helper('n ng'))
 
     # normalization
 
     def test_nfc(self):
         """NFC text."""
-        self.assertEqual(u'[\u00E9]', self.list2us_helper(u'\u00e9'))
+        self.assertEqual('[\u00E9]', self.list2us_helper('\u00e9'))
 
     # isolated marks
 
     def test_isolated_marks_bmp(self):
         """Isolated marks (that is, with no base character) need to be escaped."""
-        self.assertEqual(u'[\\u0300 \\u0301 {\u0105\u0301}]', self.list2us_helper(u'\u0300 \u0301 \u0105\u0301'))
+        self.assertEqual('[\\u0300 \\u0301 {\u0105\u0301}]', self.list2us_helper('\u0300 \u0301 \u0105\u0301'))
 
     def test_isolated_marks_nonbmp(self):
         """Isolated marks (outside of the BMP as well) need to be escaped."""
-        self.assertEqual(u'[\U00011315 \\U0001133c]', self.list2us_helper(u'\U00011315 \U0001133C'))
+        self.assertEqual('[\U00011315 \\U0001133c]', self.list2us_helper('\U00011315 \U0001133C'))
 
     # characters used in Unicode Set syntax
 
@@ -78,8 +78,8 @@ class UnicodeSetsTests(unittest.TestCase):
 
         These maybe already listed in the variable simpleescs.
         """
-        self.assertEqual(u'[\u0007 \u0008 \u0009 \u000A \u000B \u000C \u000D]',
-                         self.list2us_helper(u'\u0007 \u0008 \u0009 \u000A \u000B \u000C \u000D'))
+        self.assertEqual('[\u0007 \u0008 \u0009 \u000A \u000B \u000C \u000D]',
+                         self.list2us_helper('\u0007 \u0008 \u0009 \u000A \u000B \u000C \u000D'))
 
     def test_syntax_escape(self):
         """Some characters used in Unicode Set syntax need to be escaped with a backslash.
@@ -89,34 +89,34 @@ class UnicodeSetsTests(unittest.TestCase):
         https://unicode.org/reports/tr35/tr35.html#Unicode_Sets
         except for |. We escape | anyway, it should still work.
         """
-        self.assertEqual(u'[\\[ \\] \\{ \\} \\\\ \\& \\- \\| \\^ \\$ \\:]',
-                         self.list2us_helper(u'[ ] { } \\ & - | ^ $ :'))
+        self.assertEqual('[\\[ \\] \\{ \\} \\\\ \\& \\- \\| \\^ \\$ \\:]',
+                         self.list2us_helper('[ ] { } \\ & - | ^ $ :'))
 
     # escape some characters with hex digits
 
     def test_ignorable(self):
         """Characters having the Default_Ignorable_Code_Point property need to be escaped."""
-        self.assertEqual(u'[\\u3164]', self.list2us_helper(u'\u3164'))
+        self.assertEqual('[\\u3164]', self.list2us_helper('\u3164'))
 
     def test_format(self):
         """Characters having the format character (general category Cf) property need to be escaped."""
-        self.assertEqual(u'[\\u06dd]', self.list2us_helper(u'\u06dd'))
+        self.assertEqual('[\\u06dd]', self.list2us_helper('\u06dd'))
 
     def test_space(self):
         """Space like characters need to be escaped."""
-        self.assertEqual(u'[\\u200a]', self.list2us_helper(u'\u200a'))
+        self.assertEqual('[\\u200a]', self.list2us_helper('\u200a'))
 
     def test_pua_bmp(self):
         """PUA characters (in the BMP) need to be escaped."""
-        self.assertEqual(u'[\\ue000]', self.list2us_helper(u'\ue000'))
+        self.assertEqual('[\\ue000]', self.list2us_helper('\ue000'))
 
     def test_pua_nonbmp_a(self):
         """PUA characters (outside of the BMP) need to be escaped."""
-        self.assertEqual(u'[\\U000fff80]', self.list2us_helper(u'\U000fff80'))
+        self.assertEqual('[\\U000fff80]', self.list2us_helper('\U000fff80'))
 
     def test_pua_nonbmp_b(self):
         """PUA characters (outside of the BMP and SMP) need to be escaped."""
-        self.assertEqual(u'[\\U0010ff80]', self.list2us_helper(u'\U0010ff80'))
+        self.assertEqual('[\\U0010ff80]', self.list2us_helper('\U0010ff80'))
 
 
 if __name__ == '__main__':

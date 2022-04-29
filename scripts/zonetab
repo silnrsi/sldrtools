@@ -54,10 +54,10 @@ with open(args.infile) as inf:
 for i in range(-14, 13):
     key = "Etc/GMT{:+d}".format(i)
     row = ["001", 0.]
-    long = i * 15.
-    if long <= 180:
-        long += 360
-    row.append(long)
+    longtitude = i * 15.
+    if longtitude <= 180:
+        longtitude += 360
+    row.append(longtitude)
     results[key] = row
 for a in ("Unknown", "UTC"):
     results["Etc/"+a] = ["001", 0., 0.]

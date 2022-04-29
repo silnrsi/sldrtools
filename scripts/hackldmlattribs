@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import re, argparse
 
@@ -10,9 +10,9 @@ args = parser.parse_args()
 outf = open(args.outfile, "wb")
 inf = open(args.infile, "rb")
 for l in inf.readlines():
-    if "attribute draft" in l:
+    if b"attribute draft" in l:
         outf.write(l)
-        outf.write('    "proposed" | "tentative" | "generated" | "suspect" |\n')
+        outf.write(b'    "proposed" | "tentative" | "generated" | "suspect" |\n')
     else:
         outf.write(l)
 inf.close()

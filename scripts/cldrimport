@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -115,6 +115,6 @@ else :
 
 if args.remove:
     for l in existinglocales - alllocales:
-        fp = os.join(args.outdir, l[0], l+".xml")
+        fp = os.path.join(args.outdir, l[0], l+".xml")
         if os.path.exists(fp):
             os.unlink(fp)

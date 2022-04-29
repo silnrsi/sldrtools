@@ -1,5 +1,3 @@
-# Py2 and Py3 compatibility
-from __future__ import print_function
 import os, re
 
 # Read the DUCET file and return a corresponding data structure.
@@ -26,7 +24,7 @@ def readDucet(path="") :
             continue
 
         try:
-            key = u"".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
+            key = "".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
             vals = valre.findall(parts[1])
             result[key] = tuple(tuple(int(x, 16) for x in v) for v in vals)
         except:
@@ -90,7 +88,7 @@ def _ducetKey(str1) :
 def _generateSortKey(rawSortKey, separate=False) :
     leveledResult = zip(*rawSortKey)
     if separate:
-        return leveledResult
+        return list(leveledResult)
     else:
         return [x + (0,) for x in leveledResult]
 

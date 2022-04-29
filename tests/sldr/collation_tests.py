@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
-try:
-    from sldr.collation import Collation, SortKey
-except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-    from sldr.collation import Collation, SortKey
+from sldr.collation import Collation, SortKey
 
 class CollationTests(unittest.TestCase):
 

@@ -26,12 +26,6 @@
 from sldr.ldml import Ldml, _alldrafts
 import os
 
-try:
-    basestring
-    string_types = basestring
-except NameError:
-    string_types = str
-
 class _arrayDict(dict):
     def set(self, k, v):
         if k not in self:
@@ -94,7 +88,7 @@ class LdmlMerge(Ldml):
             addme = False
             if o.contentHash != t.contentHash:
                 self.overlay(o, usedrafts=usedrafts, this=t)
-                if t.text == u"↑↑↑" and o.text != "":
+                if t.text == "↑↑↑" and o.text != "":
                     t.text = o.text
             break  # only do one alignment
         if addme and (o.tag != "alias" or not len(this)):  # alias in effect turns it into blocking
@@ -104,7 +98,7 @@ class LdmlMerge(Ldml):
         """Handle sil:font fallback mechanism"""
         silfonttag = '{'+self.silns+'}font'
         fonts = []
-        this = list(filter(lambda x: x.attrHash == other.attrHash, this))[0]
+        this = [x for x in this if x.attrHash == other.attrHash][0]
         for t in list(this):
             if t.tag == silfonttag:
                 fonts.append(t)
@@ -122,8 +116,8 @@ class LdmlMerge(Ldml):
                         for f in fonts:
                             tt = f.get('types', 'default').split(' ')
                             if t in tt:
-                                f.set('types', " ".join(filter(lambda x: x != t, tt)))
-                        fonts = filter(lambda x: x.get('types', '') != '', fonts)
+                                f.set('types', " ".join(x for x in tt if x != t))
+                        fonts = [x for x in fonts if x.get('types', '') != '']
                 this.append(o)
             else:
                 self._overlay_child(o, this, usedrafts)
@@ -147,8 +141,8 @@ class LdmlMerge(Ldml):
     def _align(self, this, other, base):
         """Internal method to merge() that aligns elements in base and other to this and
            records the results in this. O(7N)"""
-        olist = dict(map(lambda x: (x.contentHash, x), other)) if other is not None else {}
-        blist = dict(map(lambda x: (x.contentHash, x), base)) if base is not None else {}
+        olist = dict([(x.contentHash, x) for x in other]) if other is not None else {}
+        blist = dict([(x.contentHash, x) for x in base]) if base is not None else {}
         for t in list(this):
             t.mergeOther = olist.get(t.contentHash, None)
             t.mergeBase = blist.get(t.contentHash, None)
@@ -329,7 +323,7 @@ class LdmlMerge(Ldml):
         elif self.useDrafts:
             res |= self._merge_with_alts(base, other, this, default=default, copycomments=copycomments)
         oattrs = set(other.keys() if other is not None else [])
-        for k in this.keys():                                  # go through our attributes
+        for k in list(this.keys()):                                  # go through our attributes
             if k in oattrs:
                 if k in base.attrib and base.get(k) == this.get(k) and this.get(k) != other.get(k):
                     res = True
@@ -405,7 +399,7 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(),
     if isinstance(lname, Ldml):
         l = lname
         lname = fname
-    elif not isinstance(lname, string_types):
+    elif not isinstance(lname, str):
         l = LdmlMerge(lname)
         lname = fname
     else:

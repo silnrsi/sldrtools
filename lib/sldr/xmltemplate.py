@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import lxml.etree as et
 import codecs, re, copy
@@ -14,7 +14,7 @@ class IterDict(object) :
         self.atstart = True
 
     def __setitem__(self, key, value) :
-        if isinstance(value, basestring) or not hasattr(value, 'len') :
+        if isinstance(value, str) or not hasattr(value, 'len') :
             value = [value]
         self.keys[key] = len(self.values)
         self.values.append(value)
@@ -29,7 +29,7 @@ class IterDict(object) :
     def __iter__(self) :
         return self
 
-    def next(self) :
+    def __next__(self) :
         if self.atstart :
             self.atstart = False
             return self.asdict()
@@ -40,7 +40,7 @@ class IterDict(object) :
         raise StopIteration
 
 def asstr(v) :
-    if isinstance(v, basestring) : return v
+    if isinstance(v, str) : return v
     elif isinstance(v, et._Element) : return v.text
     elif len(v) == 0 : return ''
     v = v[0]
@@ -77,7 +77,7 @@ class Templater(object) :
                     k = c.attrib[tmpl+'name']
                     if not tmpl+"fallback" in c.attrib or not k in self.vars :
                         v = self.xpath(c.text, context, c)
-                        if isinstance(v, (basestring, list)) and len(v) == 0 :
+                        if isinstance(v, (str, list)) and len(v) == 0 :
                             v = c.attrib.get(tmpl+'default', '')
                         self.vars[k] = v
                 elif name == 'value' :
@@ -151,7 +151,7 @@ class Templater(object) :
             res = context.xpath(path, extensions = extensions, smart_strings=False, **self.vars)
         except Exception as e :
             raise et.XPathEvalError(e.message + ":\n" + path + ", at line " + str(base.sourceline))
-        if not isinstance(res, basestring) and len(res) == 1 :
+        if not isinstance(res, str) and len(res) == 1 :
             res = res[0]
         return res
 
@@ -209,5 +209,5 @@ if __name__ == '__main__' :
     d = et.parse(data).getroot()
     t.process(context = d)
     with codecs.open(sys.argv[3], "w", encoding="utf-8") as of :
-        of.write(unicode(t))
+        of.write(str(t))
 
