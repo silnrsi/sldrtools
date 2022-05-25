@@ -1,0 +1,64 @@
+#!/usr/bin/python3
+
+import icu
+import argparse, sys, os
+import xml.etree.ElementTree as et
+
+breaktypes = {
+    'lb': ("LineBreak", icu.BreakIterator.createLineInstance),
+    'gb': ("GraphemeClusterBreak", icu.BreakIterator.createCharacterInstance),
+    'wb': ("WordBreak", icu.BreakIterator.createWordInstance),
+    'sb': ("SentenceBreak", icu.BreakIterator.createSentenceInstance)
+}
+
+parser = argparse.ArgumentParser()
+parser.add_argument("infile",help="Input text lines")
+parser.add_argument("-o","--outfile",help="Output results here")
+parser.add_argument("-t","--type",default="lb",help="Segmentation type [lb*, gb, wb, sb]")
+parser.add_argument("-l","--lang",help="Language sort rules to use")
+parser.add_argument("-L","--ldml",help="LDML file to read segmentation rules from")
+args = parser.parse_args()
+
+brk = None
+if args.lang is not None:
+    loc = icu.Locale.createFromName(args.lang)
+    brk = breaktypes[args.type][1](loc)
+elif args.ldml is not None:
+    if args.sortfile.endswith(".xml"):
+        doc = et.parse(args.sortfile)
+        c = doc.find('./segmentations/segment[@type="{}"]'.format(breaktypes[args.type][0]))
+        if c is None:
+            sys.stderr("Can't find collator in {}".format(args.sortfile))
+        else:
+            lines = []
+            for var in c.findall('variables/variable'):
+                lines.append("{}={}".format(var.get('id'), var.text))
+            rules = list(c.findall('segmentRules/rule'))
+            for r in sorted(rules, key=lambda x:float(x.get('id'))):
+                lines.append(r.text.strip())
+            brk = icu.RuleBasedBreakIterator("\n".join(lines))
+    elif os.path.exists(args.ldml):
+        with open(args.sortfile, encoding="utf-8") as inf:
+            rules = inf.read()
+            brk = icu.RuleBaseBreakIterator(rules)
+
+if brk is not None:
+    if args.outfile is not None:
+        outf = open(args.outfile, "w", encoding="utf-8")
+    else:
+        outf = sys.stdout
+
+    with open(args.infile, encoding="utf-8") as inf:
+        for data in inf.readlines():
+            l = data.strip()
+            brk.setText(l)
+            last = 0
+            res = []
+            for b in brk:
+                res.append(l[last:b])
+                last = b
+            outf.write("|".join(res) + "\n")
+
+    if args.outfile is not None:
+        outf.close()
+
