@@ -627,15 +627,18 @@ class Ldml(ETWriter):
                 tag, attrs = p
             else:
                 tag, attrs = (p, {})
-            for job in curr:
-                for c in job:
-                    if c.tag != tag:
-                        continue
-                    for k, v in attrs.items():
-                        if c.get(k, '') != v:
-                            break
-                    else:
-                        newcurr.append(c)
+            if tag == ".":
+                newcurr = curr
+            else:
+                for job in curr:
+                    for c in job:
+                        if c.tag != tag:
+                            continue
+                        for k, v in attrs.items():
+                            if c.get(k, '') != v:
+                                break
+                        else:
+                            newcurr.append(c)
             if matchdraft is not None and i == len(path)-1:
                 temp = newcurr
                 newcurr = []

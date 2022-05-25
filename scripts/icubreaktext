@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
 import icu
-import argparse, sys, os
+import argparse, sys, os, graphlib, re
 import xml.etree.ElementTree as et
+from sldr.ldml_merge import flattenlocale, getldml
 
 breaktypes = {
     'lb': ("LineBreak", icu.BreakIterator.createLineInstance),
@@ -16,31 +17,42 @@ parser.add_argument("infile",help="Input text lines")
 parser.add_argument("-o","--outfile",help="Output results here")
 parser.add_argument("-t","--type",default="lb",help="Segmentation type [lb*, gb, wb, sb]")
 parser.add_argument("-l","--lang",help="Language sort rules to use")
-parser.add_argument("-L","--ldml",help="LDML file to read segmentation rules from")
+parser.add_argument("-d","--dir",help="Root of LDML tree to read the lang from")
+parser.add_argument("-F","--noflatten",action="store_true",help="Do not flatten the ldml file")
+parser.add_argument("-D","--debug",action="store_true",help="Say what we are doing")
 args = parser.parse_args()
 
 brk = None
-if args.lang is not None:
-    loc = icu.Locale.createFromName(args.lang)
-    brk = breaktypes[args.type][1](loc)
-elif args.ldml is not None:
-    if args.sortfile.endswith(".xml"):
-        doc = et.parse(args.sortfile)
-        c = doc.find('./segmentations/segment[@type="{}"]'.format(breaktypes[args.type][0]))
+if args.dir is not None:
+    if args.noflatten:
+        doc = getldml(args.lang, [args.dir])
+    else:
+        doc = flattenlocale(args.lang, [args.dir])
+        c = doc.find('./segmentations/segmentation[@type="{}"]'.format(breaktypes[args.type][0]))
         if c is None:
-            sys.stderr("Can't find collator in {}".format(args.sortfile))
+            sys.stderr("Can't find segmentations in {}".format(args.lang))
         else:
             lines = []
+            ts = graphlib.TopologicalSorter()
+            vars = {}
             for var in c.findall('variables/variable'):
-                lines.append("{}={}".format(var.get('id'), var.text))
+                i = var.get('id')
+                vars[i] = var.text.strip()
+                ts.add(i)
+                for m in re.findall(r"(\$[a-zA-Z]+)", var.text):
+                    ts.add(i, m)
+            for k in ts.static_order():
+                lines.append("{}=[{}]".format(k, vars[k]))
             rules = list(c.findall('segmentRules/rule'))
             for r in sorted(rules, key=lambda x:float(x.get('id'))):
                 lines.append(r.text.strip())
-            brk = icu.RuleBasedBreakIterator("\n".join(lines))
-    elif os.path.exists(args.ldml):
-        with open(args.sortfile, encoding="utf-8") as inf:
-            rules = inf.read()
-            brk = icu.RuleBaseBreakIterator(rules)
+            r = ";\n".join(lines) + ";\n"
+            if args.debug:
+                print(r)
+            brk = icu.RuleBasedBreakIterator(r)
+elif args.lang is not None:
+    loc = icu.Locale.createFromName(args.lang)
+    brk = breaktypes[args.type][1](loc)
 
 if brk is not None:
     if args.outfile is not None:
