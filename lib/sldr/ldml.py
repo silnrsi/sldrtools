@@ -906,20 +906,22 @@ class Ldml(ETWriter):
         hasalias = False
         if _cache is None:
             _cache = set()
+        count = 1
         for (i, c) in enumerate(list(this)):
             if c.tag == 'alias':
                 v = c.get('path', None)
                 if v is None: continue
                 this.remove(c)
-                count = 1
-                for res in this.findall(v + "/*"):
+                children = this.findall(v)
+                if children is None or not len(children): continue
+                if children[0] in _cache:
+                    print("Alias loop discovered {} in {}".format(children[0], self.name))
+                    return True
+                _cache.add(children[0])
+                self.resolve_aliases(children[0], _cache)
+                _cache.remove(children[0])
+                for res in children[0]:
                     res = self._copynode(res, parent=this)
-                    if v in _cache:
-                        print("Alias loop discovered: %s in %s" % (v, self.fname))
-                        return True
-                    _cache.add(v)
-                    self.resolve_aliases(res, _cache)
-                    _cache.remove(v)
                     this.insert(i+count, res)
                     count += 1
                 hasalias = True
