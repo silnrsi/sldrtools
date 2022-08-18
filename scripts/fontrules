@@ -4,12 +4,15 @@ import argparse, os, json
 from sldr.ldml import Ldml
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeClassifier
+from langtag import lookup, langtag
 
 def fontid(s, feat=""):
     return s.replace(" ", "").lower() + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
 
 def splitkey(x):
-    return (x[0].split("-"), x[1])
+    l = langtag(x[0])
+    k = [l.lang or "", l.script or "", l.region or ""]
+    return (k[:3], x[1])
 
 class Classifier:
     def __init__(self, mapdata):
@@ -45,8 +48,9 @@ class Classifier:
     def simplerules(self):
         already = {}
         vals = {}
-        for v, f in self.treerules(0, []):
-            x = tuple(f)
+        for v, s in self.treerules(0, []):
+            f = [a for a in s if a.split("_")[1] != ""]
+            x = frozenset(f)
             skipme = False
             for i in range(1,len(f)):
                 y = tuple(f[:-i])
@@ -60,38 +64,42 @@ class Classifier:
             already[x] = v
             if v in vals:
                 best = None
-                bestscore = 0
+                bestscore = -1
                 for k in vals[v]:
                     if len(f) != len(k):
                         continue
-                    mindex = -1
-                    for i, kx in enumerate(k):
+                    mindex = None
+                    for i, kx in k.items():
                         if len(kx) > 1:
                             mindex = i
                             break
                     score = 0
-                    for i, vv in enumerate(f):
+                    for vl in f:
+                        i, vv = vl.split("_")
                         if i == mindex:
                             if vv in k[i]:
                                 score += 1
+                        elif i not in k:
+                            score = -1
+                            break
                         elif vv == k[i][0]:
                             score += 1
-                        elif mindex == -1:
+                        elif mindex is None:
                             mindex = i
                         else:
-                            score = 0
+                            score = -1
                             break
-                    if score != len(k) - 1:
-                        score = 0
+                    if score < len(k) - 1:
+                        score = -1
                     if score > bestscore:
                         bestscore = score
                         best = k
-                if bestscore > 0:
-                    for i, vv in enumerate(f):
-                        if vv not in best[i]:
+                if bestscore > -1:
+                    for i, vv in dict((x.split("_") for x in f)).items():
+                        if vv not in best[i] and vv != "":
                             best[i].append(vv)
                     continue
-            vals.setdefault(v, []).append([[vv] for vv in f])
+            vals.setdefault(v, []).append({vv.split("_")[0]:[vv.split("_")[1]] for vv in f})
         return vals
 
 
@@ -99,6 +107,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("indir",help="Directory of files to process")
 parser.add_argument("-o","--outfile",default="fontrules.json",help="Output fontrules.json")
 parser.add_argument("--intermediate",help="Output interim results")
+parser.add_argument("--min",action="store_true",help="Use a minimal tag rather than maximal")
 args=parser.parse_args()
 
 jobs = []
@@ -124,7 +133,12 @@ for j in jobs:
         continue
     script = inf.get("script")
     region = inf.get("defaultRegion")
-    ltag = "{}-{}-{}".format(lang, script, region).lower()
+    ltag = "{}-{}-{}".format(lang, script, region).lower().replace("-none", "")
+    try:
+        ltagset = lookup(ltag)
+    except KeyError:
+        continue
+    ltag = str(ltagset.tag if args.min else ltagset.full).lower()
 
     fallback = None
     for f in l.findall("special/sil:external-resources/sil:font"):
@@ -157,10 +171,10 @@ for k, v in vals.items():
         rule = { "result" : {"fontid": results[0]}, "match": {}}
         if len(results) > 1 and len(results[1]):
             rule["result"]["features"] = results[1]
-        for x in r:
-            b = x[0].split("_")
-            vals = [s.split("_")[1] for s in x]
-            rule["match"][b[0]] = vals if len(vals) > 1 else vals[0]
+        for b, vals in r.items():
+            if not len(vals) or len(vals) == 1 and vals[0] == "":
+                continue
+            rule["match"][b] = vals if len(vals) > 1 else vals[0]
         if len(rule["match"]):
             rules.append(rule)
 
