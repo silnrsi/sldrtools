@@ -42,6 +42,59 @@ class Classifier:
         else:
             yield from self.treerules(right, feats)
 
+    def simplerules(self):
+        already = {}
+        vals = {}
+        for v, f in self.treerules(0, []):
+            x = tuple(f)
+            skipme = False
+            for i in range(1,len(f)):
+                y = tuple(f[:-i])
+                curr = already.get(y, None)
+                if curr == v:
+                    skipme = True
+                if curr is not None:
+                    break
+            if skipme:
+                continue
+            already[x] = v
+            if v in vals:
+                best = None
+                bestscore = 0
+                for k in vals[v]:
+                    if len(f) != len(k):
+                        continue
+                    mindex = -1
+                    for i, kx in enumerate(k):
+                        if len(kx) > 1:
+                            mindex = i
+                            break
+                    score = 0
+                    for i, vv in enumerate(f):
+                        if i == mindex:
+                            if vv in k[i]:
+                                score += 1
+                        elif vv == k[i][0]:
+                            score += 1
+                        elif mindex == -1:
+                            mindex = i
+                        else:
+                            score = 0
+                            break
+                    if score != len(k) - 1:
+                        score = 0
+                    if score > bestscore:
+                        bestscore = score
+                        best = k
+                if bestscore > 0:
+                    for i, vv in enumerate(f):
+                        if vv not in best[i]:
+                            best[i].append(vv)
+                    continue
+            vals.setdefault(v, []).append([[vv] for vv in f])
+        return vals
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("indir",help="Directory of files to process")
 parser.add_argument("-o","--outfile",default="fontrules.json",help="Output fontrules.json")
@@ -95,55 +148,7 @@ if args.intermediate:
 #    invltagmap.setdefault(v, []).append(k)
 #print(invltagmap)
 c = Classifier(ltagmap)
-already = {}
-vals = {}
-for v, f in c.treerules(0, []):
-    x = tuple(f)
-    skipme = False
-    for i in range(1,len(f)):
-        y = tuple(f[:-i])
-        curr = already.get(y, None)
-        if curr == v:
-            skipme = True
-        if curr is not None:
-            break
-    if skipme:
-        continue
-    already[x] = v
-    if v in vals:
-        best = None
-        bestscore = 0
-        for k in vals[v]:
-            if len(f) != len(k):
-                continue
-            mindex = -1
-            for i, kx in enumerate(k):
-                if len(kx) > 1:
-                    mindex = i
-                    break
-            score = 0
-            for i, vv in enumerate(f):
-                if i == mindex:
-                    if vv in k[i]:
-                        score += 1
-                elif vv == k[i][0]:
-                    score += 1
-                elif mindex == -1:
-                    mindex = i
-                else:
-                    score = 0
-                    break
-            if score != len(k) - 1:
-                score = 0
-            if score > bestscore:
-                bestscore = score
-                best = k
-        if bestscore > 0:
-            for i, vv in enumerate(f):
-                if vv not in best[i]:
-                    best[i].append(vv)
-            continue
-    vals.setdefault(v, []).append([[vv] for vv in f])
+vals = c.simplerules()
 
 rules = []
 for k, v in vals.items():
