@@ -183,9 +183,8 @@ for k, v in vals.items():
         if len(rule["match"]):
             rules.append(rule)
 
-rules.sort(key=lambda x: (#x["result"]["fontid"], x["result"].get("features", ""),
-                          -len(x["match"]), x["match"].get("scr", [""])[0],
-                          x["match"].get("reg", [""])[0]))
+rules.sort(key=lambda x: (-len(x["match"]), x["result"]["fontid"], x["result"].get("features", ""),
+                          x["match"].get("scr", [""])[0], x["match"].get("reg", [""])[0]))
 print(f"{len(rules)} rules")
 if args.outfile:
     with open(args.outfile, "w", encoding="utf-8") as outf:
