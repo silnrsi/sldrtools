@@ -1,0 +1,171 @@
+#!/usr/bin/python3
+
+import argparse, os, json
+from sldr.ldml import Ldml
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.tree import DecisionTreeClassifier
+
+def fontid(s, feat=""):
+    return s.replace(" ", "").lower() + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
+
+def splitkey(x):
+    return (x[0].split("-"), x[1])
+
+class Classifier:
+    def __init__(self, mapdata):
+        self.mapdata = mapdata
+        self.X, self.Y = zip(*map(splitkey, mapdata.items()))
+        self.ohe = OneHotEncoder()
+        self.ohe.fit(self.X)
+        self.X_ohe = self.ohe.transform(self.X).toarray()
+        self.feat_names = self.ohe.get_feature_names(["lang", "scr", "reg"])
+        self.clf = DecisionTreeClassifier()
+        self.clf.fit(self.X_ohe, self.Y)
+        indices = self.clf.apply(self.X_ohe)
+        self.values = {indices[i]: self.Y[i] for i in range(len(self.X_ohe))}
+
+    def treerules(self, node, feats):
+        newfeat = self.clf.tree_.feature[node]
+        left = self.clf.tree_.children_left[node]
+        right = self.clf.tree_.children_right[node]
+        val = self.values.get(node, None)
+        if left == -1:
+                yield ((val, feats))
+        else:
+            yield from self.treerules(left, feats)
+        if left == right:
+            return
+        #newf = self.ohe.inverse_transform([self.X_ohe[newfeat]])
+        feats = feats[:] + [self.feat_names[newfeat]]
+        if right == -1:
+                yield ((val, feats))
+        else:
+            yield from self.treerules(right, feats)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("indir",help="Directory of files to process")
+parser.add_argument("-o","--outfile",default="fontrules.json",help="Output fontrules.json")
+parser.add_argument("--intermediate",help="Output interim results")
+args=parser.parse_args()
+
+jobs = []
+if os.path.isdir(args.indir):
+    for dp, dn, fn in os.walk(args.indir):
+        for f in fn:
+            if f.endswith('.xml'):
+                jobs.append(os.path.join(dp, f))
+    ltagmap = {}
+else:
+    with open(args.indir) as inf:
+        ltagmap = json.load(inf)
+
+print(f"{len(jobs)} files to test")
+for j in jobs:
+    l = Ldml(j)
+    langn = l.find("identity/language")
+    if langn is None:
+        continue
+    lang = langn.get("type", None)
+    inf = l.find("identity/special/sil:identity")
+    if inf is None:
+        continue
+    script = inf.get("script")
+    region = inf.get("defaultRegion")
+    ltag = "{}-{}-{}".format(lang, script, region).lower()
+
+    fallback = None
+    for f in l.findall("special/sil:external-resources/sil:font"):
+        t = f.get("types", "")
+        if t == "":
+            fallback = fontid(f.get("name"), f.get("features", ""))
+        elif "default" in t:
+            ltagmap[ltag] = fontid(f.get("name"), f.get("features", ""))
+            break
+    else:
+        if fallback is not None:
+            ltagmap[ltag] = fallback
+
+print(f"Found {len(ltagmap)} entries")
+if args.intermediate:
+    with open(args.intermediate, "w") as outf:
+        json.dump(ltagmap, outf)
+
+#invltagmap = {}
+#for k, v in ltagmap.items():
+#    invltagmap.setdefault(v, []).append(k)
+#print(invltagmap)
+c = Classifier(ltagmap)
+already = {}
+vals = {}
+for v, f in c.treerules(0, []):
+    x = tuple(f)
+    skipme = False
+    for i in range(1,len(f)):
+        y = tuple(f[:-i])
+        curr = already.get(y, None)
+        if curr == v:
+            skipme = True
+        if curr is not None:
+            break
+    if skipme:
+        continue
+    already[x] = v
+    if v in vals:
+        best = None
+        bestscore = 0
+        for k in vals[v]:
+            if len(f) != len(k):
+                continue
+            mindex = -1
+            for i, kx in enumerate(k):
+                if len(kx) > 1:
+                    mindex = i
+                    break
+            score = 0
+            for i, vv in enumerate(f):
+                if i == mindex:
+                    if vv in k[i]:
+                        score += 1
+                elif vv == k[i][0]:
+                    score += 1
+                elif mindex == -1:
+                    mindex = i
+                else:
+                    score = 0
+                    break
+            if score != len(k) - 1:
+                score = 0
+            if score > bestscore:
+                bestscore = score
+                best = k
+        if bestscore > 0:
+            for i, vv in enumerate(f):
+                if vv not in best[i]:
+                    best[i].append(vv)
+            continue
+    vals.setdefault(v, []).append([[vv] for vv in f])
+
+rules = []
+for k, v in vals.items():
+    for r in v:
+        results = k.split("|")
+        rule = { "result" : {"fontid": results[0]}, "match": {}}
+        if len(results) > 1 and len(results[1]):
+            rule["result"]["features"] = results[1]
+        for x in r:
+            b = x[0].split("_")
+            vals = [s.split("_")[1] for s in x]
+            rule["match"][b[0]] = vals if len(vals) > 1 else vals[0]
+        if len(rule["match"]):
+            rules.append(rule)
+
+rules.sort(key=lambda x: len(x["match"]), reverse=True)
+print(f"{len(rules)} rules")
+if args.outfile:
+    with open(args.outfile, "w", encoding="utf-8") as outf:
+        outf.write("[\n")
+        for i, r in enumerate(rules):
+            json.dump(r, outf)
+            outf.write("\n" if i == len(rules) - 1 else ",\n")
+        outf.write("]\n")
+
