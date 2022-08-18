@@ -5,6 +5,7 @@ from sldr.ldml import Ldml
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeClassifier
 from langtag import lookup, langtag
+from itertools import combinations
 
 def fontid(s, feat=""):
     return s.replace(" ", "").lower() + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
@@ -51,14 +52,18 @@ class Classifier:
         for v, s in self.treerules(0, []):
             f = [a for a in s if a.split("_")[1] != ""]
             x = frozenset(f)
+            # 
             skipme = False
-            for i in range(1,len(f)):
-                y = tuple(f[:-i])
-                curr = already.get(y, None)
-                if curr == v:
-                    skipme = True
-                if curr is not None:
-                    break
+            for i in range(len(f)-1, 0, -1):
+                for y in combinations(f, i):
+                    curr = already.get(y, None)
+                    if curr == v:
+                        skipme = True
+                    if curr is not None:
+                        break
+                else:
+                    continue
+                break
             if skipme:
                 continue
             already[x] = v
@@ -171,20 +176,22 @@ for k, v in vals.items():
         rule = { "result" : {"fontid": results[0]}, "match": {}}
         if len(results) > 1 and len(results[1]):
             rule["result"]["features"] = results[1]
-        for b, vals in r.items():
+        for b, vals in sorted(r.items()):
             if not len(vals) or len(vals) == 1 and vals[0] == "":
                 continue
             rule["match"][b] = vals if len(vals) > 1 else vals[0]
         if len(rule["match"]):
             rules.append(rule)
 
-rules.sort(key=lambda x: len(x["match"]), reverse=True)
+rules.sort(key=lambda x: (#x["result"]["fontid"], x["result"].get("features", ""),
+                          -len(x["match"]), x["match"].get("scr", [""])[0],
+                          x["match"].get("reg", [""])[0]))
 print(f"{len(rules)} rules")
 if args.outfile:
     with open(args.outfile, "w", encoding="utf-8") as outf:
         outf.write("[\n")
         for i, r in enumerate(rules):
-            json.dump(r, outf)
+            json.dump(r, outf, ensure_ascii=False)
             outf.write("\n" if i == len(rules) - 1 else ",\n")
         outf.write("]\n")
 
