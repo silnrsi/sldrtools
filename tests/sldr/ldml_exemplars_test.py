@@ -209,29 +209,37 @@ class UCDTests(unittest.TestCase):
         text = '\u0061\u035C\u0315\u0300\u1DF6\u0062'
         self.assertEqual('\u0061\u0300\u0315\u1DF6\u035C\u0062', self.ucd.normalize('NFD', text))
 
-    def ignore_nfc_tus11(self):
+    def test_nfc_tus11(self):
         text = '\u0061\u0315\u0300\u05AE\u09FE\u0062'
         self.assertEqual('\u00E0\u05AE\u09FE\u0315\u0062', self.ucd.normalize('NFC', text))
 
-    def ignore_nfd_tus11(self):
+    def test_nfd_tus11(self):
         text = '\u0061\u0315\u0300\u05AE\u09FE\u0062'
         self.assertEqual('\u0061\u05AE\u0300\u09FE\u0315\u0062', self.ucd.normalize('NFD', text))
 
-    def ignore_nfc_tus12(self):
+    def test_nfc_tus12(self):
         text = '\u0061\u0315\u0300\u05AE\U0001E136\u0062'
         self.assertEqual('\u00E0\u05AE\U0001E136\u0315\u0062', self.ucd.normalize('NFC', text))
 
-    def ignore_nfd_tus12(self):
+    def test_nfd_tus12(self):
         text = '\u0061\u0315\u0300\u05AE\U0001E136\u0062'
         self.assertEqual('\u0061\u05AE\u0300\U0001E136\u0315\u0062', self.ucd.normalize('NFD', text))
 
-    def ignore_nfc_tus13(self):
+    def test_nfc_tus13(self):
         text = '\u0061\u3099\u093C\U00016FF0\u09BC\u0062'
-        self.assertEqual('\u0061\U00016FF0\u093C\u09BC\u3099\u0062', tf.normalize('NFC', text))
+        self.assertEqual('\u0061\U00016FF0\u093C\u09BC\u3099\u0062', self.ucd.normalize('NFC', text))
 
-    def ignore_nfd_tus13(self):
+    def test_nfd_tus13(self):
         text = '\u0061\u3099\u093C\U00016FF0\u09BC\u0062'
-        self.assertEqual('\u0061\U00016FF0\u093C\u09BC\u3099\u0062', tf.normalize('NFD', text))
+        self.assertEqual('\u0061\U00016FF0\u093C\u09BC\u3099\u0062', self.ucd.normalize('NFD', text))
+
+    def test_nfc_tus14(self):
+        text = u'\u0061\u0315\u0300\u05AE\u1ACC\u0062'
+        self.assertEqual(u'\u00E0\u05AE\u1ACC\u0315\u0062', self.ucd.normalize('NFC', text))
+
+    def test_nfd_tus14(self):
+        text = u'\u0061\u0315\u0300\u05AE\u1ACC\u0062'
+        self.assertEqual(u'\u0061\u05AE\u0300\u1ACC\u0315\u0062', self.ucd.normalize('NFD', text))
 
 
 class ExemplarsTests(unittest.TestCase):
