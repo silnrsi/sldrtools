@@ -8,7 +8,8 @@ from langtag import lookup, langtag
 from itertools import combinations
 
 def fontid(s, feat=""):
-    return s.replace(" ", "").lower() + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
+    #return s.replace(" ", "").lower() + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
+    return s + "|" + " ".join(sorted([f for f in feat.split() if not f.endswith("=0")]))
 
 class Classifier:
     """ Creates a decision tree from a dict of key values. The key is split
