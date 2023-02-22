@@ -396,6 +396,17 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(),
         else:
             return s[:r]
 
+    def getscript(l):
+        ls = None
+        ltemp = l.find("identity/special/sil:identity")
+        if ltemp is not None:
+            ls = ltemp.get("script", None)
+        if ls is None:
+            ltemp = l.find("identity/script")
+            if ltemp is not None:
+                ls = ltemp.get("type", None)
+        return ls
+
     if isinstance(lname, Ldml):
         l = lname
         lname = fname
@@ -406,6 +417,7 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(),
         l = getldml(lname, dirs)
     if l is None: return l
     if skipstubs and len(l.root) == 1 and l.root[0].tag == 'identity': return None
+    ls = getscript(l)
     if rev != 'c':
         fallbacks = l.get_parent_locales(lname)
         if not len(fallbacks):
@@ -424,14 +436,16 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(),
             while len(f):
                 o = getldml(f, dirs)
                 if o is not None:
-                    if rev == 'r':
-                        l.difference(o)
-                        dome = False
-                        break   # only need one for unflatten
-                    else:
-                        if f == 'root':
-                            l.flag_nonroots()
-                        l.overlay(o)
+                    os = getscript(o)
+                    if os == ls:
+                        if rev == 'r':
+                            l.difference(o)
+                            dome = False
+                            break   # only need one for unflatten
+                        else:
+                            if f == 'root':
+                                l.flag_nonroots()
+                            l.overlay(o)
                 f = trimtag(f)
             if not dome: break
     if resolveAlias:
