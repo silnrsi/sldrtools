@@ -437,7 +437,7 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(),
                 o = getldml(f, dirs)
                 if o is not None:
                     os = getscript(o)
-                    if os == ls:
+                    if os is None or os == ls:
                         if rev == 'r':
                             l.difference(o)
                             dome = False
