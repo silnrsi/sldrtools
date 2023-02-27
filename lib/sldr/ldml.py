@@ -51,6 +51,8 @@ def getldml(loc, indirs):
 
 _elementprotect = {
     '&': '&amp;',
+    '"': '&quot;',
+    "'": '&apos;',
     '<': '&lt;',
     '>': '&gt;' }
 _attribprotect = dict(_elementprotect)
