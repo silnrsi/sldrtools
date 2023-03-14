@@ -1,3 +1,64 @@
 [build-system]
 requires = ["setuptools>=62.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "sldr"
+version = "0.7.5"
+description = "python package and scripts for working with SLDR"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    {name = "Martin Hosken", email = "martin_hosken@sil.org"},
+    {name = "David Rowe", email = "david_rowe@sil.org"}
+]
+maintainers = [
+    {name = "David Rowe"},
+    {name = "Martin Hosken"}
+]
+requires-python = ">= 3.7"
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "Programming Language :: Python :: 3.7",
+]
+dependencies = [
+    "cssutils",
+    "langtag @ git+https://github.com/silnrsi/langtags@master",
+    "lxml",
+    "odfpy",
+    "pyicu",
+    "scikit_learn"
+]
+
+[project.urls]
+"Homepage" = "http://github.com/silnrsi/sldrtools/README.md"
+"Repository" = "http://github.com/silnrsi/sldrtools"
+
+[tool.setuptools]
+platforms = ["Linux", "Win32", "Mac OS X"]
+zip-safe = false
+#packages.find = { where = ["lib"] }
+package-dir = { "" = "lib" }
+packages = ["sldr"]
+script-files = [
+    "scripts/cldrimport",
+    "scripts/fontmatch",
+    "scripts/icubreaktext",
+    "scripts/ldmlflatten",
+    "scripts/proccldrcomments",
+    "scripts/sldraddkeymans",
+    "scripts/sldr-flat-publish.sh",
+    "scripts/cldrupdate",
+    "scripts/fontrules",
+    "scripts/icupretty",
+    "scripts/ldmlmerge",
+    "scripts/sheetldml",
+    "scripts/sldrautonames",
+    "scripts/zonetab",
+    "scripts/fixsldr",
+    "scripts/hackldmlattribs",
+    "scripts/kbdtest",
+    "scripts/ldmlnormalize",
+    "scripts/sldraddfonts",
+    "scripts/sldrcoverage"
+]
