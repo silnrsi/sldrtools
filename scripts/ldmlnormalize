@@ -30,7 +30,11 @@ else:
                     allouts.append(fo)
 
 for fi, fo in zip(allins, allouts):
-    l = Ldml(fi)
+    try:
+        l = Ldml(fi)
+    except Exception as e:
+        print(f"{e} in {fi}")
+        continue
     l.save_as(fo)
 
     if args.validate:

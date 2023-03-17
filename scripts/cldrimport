@@ -31,6 +31,7 @@ revision information, ready for integrating into the SLDR.'''
 import os, sys, codecs, subprocess
 from argparse import ArgumentParser
 from sldr.ldml_merge import LdmlMerge
+from langtag import lookup
 
 from multiprocessing import Pool
 
@@ -62,6 +63,7 @@ if args.remove:
                 if l[-4:].lower() == ".xml":
                     existinglocales.add(l[:-4])
 
+lagen = lookup('en')        # load the langtags module to share with subprocesses
 # define this function after declaring args so we can access args within it
 def doit(a) :
     curr = None
@@ -77,10 +79,15 @@ def doit(a) :
                 curr = l
     if curr is not None :
         curr.normalise()
+        ltag = lookup(a.replace("_", "-"))
+        extras = {}
+        if ltag is not None:
+            extras['script'] = ltag.script
+            extras['defaultRegion'] = ltag.region
         if args.seed :
-            curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed')
+            curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed', **extras)
         else :
-            curr.add_silidentity(draft = 'approved', source = 'cldr')
+            curr.add_silidentity(draft = 'approved', source = 'cldr', **extras)
         if args.hg :
             dohg(curr, allfiles)
         p = os.path.join(args.outdir, a[0])
