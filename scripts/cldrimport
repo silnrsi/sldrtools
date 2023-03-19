@@ -79,7 +79,10 @@ def doit(a) :
                 curr = l
     if curr is not None :
         curr.normalise()
-        ltag = lookup(a.replace("_", "-"))
+        try:
+            ltag = lookup(a.replace("_", "-"))
+        except KeyError:
+            ltag = None
         extras = {}
         if ltag is not None:
             extras['script'] = ltag.script
@@ -87,7 +90,7 @@ def doit(a) :
         if args.seed :
             curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed', **extras)
         else :
-            curr.add_silidentity(draft = 'approved', source = 'cldr', **extras)
+            curr.add_silidentity(source = 'cldr', **extras)
         if args.hg :
             dohg(curr, allfiles)
         p = os.path.join(args.outdir, a[0])
