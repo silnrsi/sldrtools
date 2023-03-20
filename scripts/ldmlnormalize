@@ -40,6 +40,6 @@ for fi, fo in zip(allins, allouts):
     if args.validate:
         from lxml.etree import parse, RelaxNG
         validator = RelaxNG(file=os.path.join(os.path.dirname(__file__), '..', 'doc', 'sil.rng'))
-        xml = parse(fi)
+        xml = parse(fi) # type: ignore
         validator.assertValid(xml)
 

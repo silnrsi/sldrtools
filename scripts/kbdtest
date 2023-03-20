@@ -64,34 +64,43 @@ keymap = {
     'K_EQUAL' : 'E12',
 }
 
-parser = argparse.ArgumentParser()
-parser.add_argument('kbdfile',help='Keyboard LDML file')
-parser.add_argument('infile', help='Input test .xml file')
-parser.add_argument('--usvs', action="store_true", help="Output USVs in error messages")
-args = parser.parse_args()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('kbdfile',help='Keyboard LDML file')
+    parser.add_argument('infile', help='Input test .xml file')
+    parser.add_argument('--usvs', action="store_true", help="Output USVs in error messages")
+    args = parser.parse_args()
 
-kbd = Keyboard(args.kbdfile)
-doc = et.parse(args.infile)
-errors = 0
-for i, e in enumerate(doc.findall('.//event')):
-    k = e.find('./key')
-    if k is None : continue
-    s = k.find('./shiftstate')
-    modifiers = []
-    if s is not None:
-        for c in s:
-            modifiers.append(modifiermap[c.tag])
-    v = k.find("./vkey")
-    if v is None: continue
-    key = keymap[v.text.strip()]
-    t = e.find('./postcontext/text')
-    if t is None: continue
-    test = t.text
-    res = kbd.process(key, modifiers)
-    if str(res) != test:
-        print("Failed test {}: {} should be {}".format(i+1, res, test))
-        if args.usvs:
-            print(" ".join("U+{:04X}".format(ord(x)) for x in str(res)) + " should be " + \
-                  " ".join("U+{:04X}".format(ord(x)) for x in test))
-        errors += 1
-sys.exit(errors)
+    kbd = Keyboard(args.kbdfile)
+    doc = et.parse(args.infile)
+    errors = 0
+    for i, e in enumerate(doc.findall('.//event')):
+        k = e.find('./key')
+        if k is None:
+            continue
+        s = k.find('./shiftstate')
+        modifiers = []
+        if s is not None:
+            for c in s:
+                modifiers.append(modifiermap[c.tag])
+        v = k.find("./vkey")
+        if v is None:
+            continue
+        assert v.text is not None
+        key = keymap[v.text.strip()]
+        t = e.find('./postcontext/text')
+        if t is None:
+            continue
+        assert t.text is not None
+        test = t.text
+        res = kbd.process(key, modifiers)
+        if str(res) != test:
+            print("Failed test {}: {} should be {}".format(i+1, res, test))
+            if args.usvs:
+                print(" ".join("U+{:04X}".format(ord(x)) for x in str(res)) + " should be " + \
+                    " ".join("U+{:04X}".format(ord(x)) for x in test))
+            errors += 1
+    sys.exit(errors)
+
+if __name__ == "__main__":
+    main()

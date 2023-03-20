@@ -1,7 +1,8 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse, os, json, sys
 from sldr.ldml import Ldml
+from numpy import ndarray
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeClassifier
 from langtag import lookup, langtag
@@ -19,8 +20,9 @@ class Classifier:
         self.X, self.Y = zip(*map(self._splitkey, mapdata.items()))
         self.ohe = OneHotEncoder()
         self.ohe.fit(self.X)
-        self.X_ohe = self.ohe.transform(self.X).toarray()
-        self.feat_names = self.ohe.get_feature_names(["lang", "scr", "reg"])
+        m = self.ohe.transform(self.X)
+        self.X_ohe = m if isinstance(m, ndarray) else m.toarray()
+        self.feat_names = self.ohe.get_feature_names_out(["lang", "scr", "reg"])
         self.clf = DecisionTreeClassifier()
         self.clf.fit(self.X_ohe, self.Y)
         indices = self.clf.apply(self.X_ohe)
@@ -117,6 +119,7 @@ class Classifier:
                         best = k
                 # found a rule worth merging into
                 if bestscore > -1:
+                    assert best is not None
                     for i, vv in dict((x.split("_") for x in f)).items():
                         if vv not in best[i] and vv != "":
                             best[i].append(vv)
@@ -126,102 +129,104 @@ class Classifier:
         print(f"Skipped {skipcount}")
         return vals
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("indir",help="Directory of files to process")
+    parser.add_argument("-o","--outfile",default="fontrules.json",help="Output fontrules.json")
+    parser.add_argument("--intermediate",help="Output interim results")
+    parser.add_argument("--min",action="store_true",help="Use a minimal tag rather than maximal")
+    parser.add_argument("-R","--resultsort",action="store_true",help="Sort by results, which is inaccurate but helpful for review")
+    parser.add_argument("-L","--literal",action="store_true",help="Unsorted straight from the tree")
+    args=parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument("indir",help="Directory of files to process")
-parser.add_argument("-o","--outfile",default="fontrules.json",help="Output fontrules.json")
-parser.add_argument("--intermediate",help="Output interim results")
-parser.add_argument("--min",action="store_true",help="Use a minimal tag rather than maximal")
-parser.add_argument("-R","--resultsort",action="store_true",help="Sort by results, which is inaccurate but helpful for review")
-parser.add_argument("-L","--literal",action="store_true",help="Unsorted straight from the tree")
-args=parser.parse_args()
-
-jobs = []
-if os.path.isdir(args.indir):
-    for dp, dn, fn in os.walk(args.indir):
-        for f in fn:
-            if f.endswith('.xml'):
-                jobs.append(os.path.join(dp, f))
-    ltagmap = {}
-else:
-    with open(args.indir) as inf:
-        ltagmap = json.load(inf)
-
-print(f"{len(jobs)} files to test")
-for j in jobs:
-    l = Ldml(j)
-    langn = l.find("identity/language")
-    if langn is None:
-        continue
-    lang = langn.get("type", None)
-    inf = l.find("identity/special/sil:identity")
-    if inf is None:
-        continue
-    script = inf.get("script")
-    region = inf.get("defaultRegion")
-    ltag = "{}-{}-{}".format(lang, script, region).lower().replace("-none", "")
-    try:
-        ltagset = lookup(ltag)
-    except KeyError:
-        continue
-    ltag = str(ltagset.tag if args.min else ltagset.full).lower()
-
-    fallback = None
-    for f in l.findall("special/sil:external-resources/sil:font"):
-        t = f.get("types", "")
-        if t == "":
-            fallback = fontid(f.get("name"), f.get("features", ""))
-        elif "default" in t:
-            ltagmap[ltag] = fontid(f.get("name"), f.get("features", ""))
-            break
+    jobs = []
+    if os.path.isdir(args.indir):
+        for dp, dn, fn in os.walk(args.indir):
+            for f in fn:
+                if f.endswith('.xml'):
+                    jobs.append(os.path.join(dp, f))
+        ltagmap = {}
     else:
-        if fallback is not None:
-            ltagmap[ltag] = fallback
+        with open(args.indir) as inf:
+            ltagmap = json.load(inf)
 
-print(f"Found {len(ltagmap)} entries")
-if args.intermediate:
-    with open(args.intermediate, "w") as outf:
-        json.dump(ltagmap, outf)
+    print(f"{len(jobs)} files to test")
+    for j in jobs:
+        l = Ldml(j)
+        langn = l.find("identity/language")
+        if langn is None:
+            continue
+        lang = langn.get("type", None)
+        inf = l.find("identity/special/sil:identity")
+        if inf is None:
+            continue
+        script = inf.get("script")
+        region = inf.get("defaultRegion")
+        ltag = "{}-{}-{}".format(lang, script, region).lower().replace("-none", "")
+        try:
+            ltagset = lookup(ltag)
+        except KeyError:
+            continue
+        ltag = str(ltagset.tag if args.min else ltagset.full).lower()
 
-#invltagmap = {}
-#for k, v in ltagmap.items():
-#    invltagmap.setdefault(v, []).append(k)
-#print(invltagmap)
-c = Classifier(ltagmap)
-vals = c.simplerules()
+        fallback = None
+        for f in l.findall("special/sil:external-resources/sil:font"):
+            t = f.get("types", "")
+            if t == "":
+                fallback = fontid(f.get("name"), f.get("features", ""))
+            elif "default" in t:
+                ltagmap[ltag] = fontid(f.get("name"), f.get("features", ""))
+                break
+        else:
+            if fallback is not None:
+                ltagmap[ltag] = fallback
 
-if args.literal:
-    for v, r in reversed(list(c.treerules(0, []))):
-        print(f"{v} -> {r}")
-    sys.exit(0)
+    print(f"Found {len(ltagmap)} entries")
+    if args.intermediate:
+        with open(args.intermediate, "w") as outf:
+            json.dump(ltagmap, outf)
 
-rules = []
-for k, v in vals.items():
-    for r in v:
-        results = k.split("|")
-        rule = { "result" : {"fontid": results[0]}, "match": {}}
-        if len(results) > 1 and len(results[1]):
-            rule["result"]["features"] = results[1]
-        for b, vals in sorted(r.items()):
-            if not len(vals) or len(vals) == 1 and vals[0] == "":
-                continue
-            rule["match"][b] = vals if len(vals) > 1 else vals[0]
-        if len(rule["match"]):
-            rules.append(rule)
+    #invltagmap = {}
+    #for k, v in ltagmap.items():
+    #    invltagmap.setdefault(v, []).append(k)
+    #print(invltagmap)
+    c = Classifier(ltagmap)
+    vals = c.simplerules()
 
-if args.resultsort:
-    rules.sort(key=lambda x: (x["result"]["fontid"], x["result"].get("features", ""), -len(x["match"]),
-                              x["match"].get("scr", [""])[0], x["match"].get("reg", [""])[0]))
-else:
-    rules.sort(key=lambda x: (-len(x["match"]), x["result"]["fontid"], x["result"].get("features", ""),
-                              x["match"].get("scr", [""])[0], x["match"].get("reg", [""])[0]))
+    if args.literal:
+        for v, r in reversed(list(c.treerules(0, []))):
+            print(f"{v} -> {r}")
+        sys.exit(0)
 
-print(f"{len(rules)} rules")
-if args.outfile:
-    with open(args.outfile, "w", encoding="utf-8") as outf:
-        outf.write("[\n")
-        for i, r in enumerate(rules):
-            json.dump(r, outf, ensure_ascii=False)
-            outf.write("\n" if i == len(rules) - 1 else ",\n")
-        outf.write("]\n")
+    rules = []
+    for k, v in vals.items():
+        for r in v:
+            results = k.split("|")
+            rule = { "result" : {"fontid": results[0]}, "match": {}}
+            if len(results) > 1 and len(results[1]):
+                rule["result"]["features"] = results[1]
+            for b, vals in sorted(r.items()):
+                if not len(vals) or len(vals) == 1 and vals[0] == "":
+                    continue
+                rule["match"][b] = vals if len(vals) > 1 else vals[0]
+            if len(rule["match"]):
+                rules.append(rule)
 
+    if args.resultsort:
+        rules.sort(key=lambda x: (x["result"]["fontid"], x["result"].get("features", ""), -len(x["match"]),
+                                x["match"].get("scr", [""])[0], x["match"].get("reg", [""])[0]))
+    else:
+        rules.sort(key=lambda x: (-len(x["match"]), x["result"]["fontid"], x["result"].get("features", ""),
+                                x["match"].get("scr", [""])[0], x["match"].get("reg", [""])[0]))
+
+    print(f"{len(rules)} rules")
+    if args.outfile:
+        with open(args.outfile, "w", encoding="utf-8") as outf:
+            outf.write("[\n")
+            for i, r in enumerate(rules):
+                json.dump(r, outf, ensure_ascii=False)
+                outf.write("\n" if i == len(rules) - 1 else ",\n")
+            outf.write("]\n")
+
+if __name__ == "__main__":
+    main()

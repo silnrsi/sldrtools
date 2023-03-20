@@ -32,96 +32,101 @@ import os, sys, codecs, subprocess
 from argparse import ArgumentParser
 from sldr.ldml_merge import LdmlMerge
 from langtag import lookup
-
+from xml.etree import ElementTree as et
 from multiprocessing import Pool
 
-parser = ArgumentParser(description=__doc__)
-parser.add_argument('indir', help='cldr common directory (path/cldr/common, or path/cldr/seed)')
-parser.add_argument('outdir', help='Directory to store results in')
-parser.add_argument('-s','--single',action='store_true', help='Turn off multiprocessing')
-parser.add_argument('--seed',action='store_true',help='Pulling from CLDR seed')
-parser.add_argument('--hg',action='store_true',help='Get revision and date information from hg repo indir/../.hg')
-parser.add_argument('-t','--topns',action='store_true',help='Outputs namespace declarations at top of file instead of as low as possible')
-parser.add_argument('-r','--remove',action='store_true',help='Remove existing files not in source')
-args = parser.parse_args()
+def main():
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument('indir', help='cldr common directory (path/cldr/common, or path/cldr/seed)')
+    parser.add_argument('outdir', help='Directory to store results in')
+    parser.add_argument('-s','--single',action='store_true', help='Turn off multiprocessing')
+    parser.add_argument('--seed',action='store_true',help='Pulling from CLDR seed')
+    parser.add_argument('--hg',action='store_true',help='Get revision and date information from hg repo indir/../.hg')
+    parser.add_argument('-t','--topns',action='store_true',help='Outputs namespace declarations at top of file instead of as low as possible')
+    parser.add_argument('-r','--remove',action='store_true',help='Remove existing files not in source')
+    args = parser.parse_args()
 
-subdirs = ('main', 'collation', 'casing', 'segments')
+    subdirs = ('main', 'collation', 'casing', 'segments')
 
-alllocales = set()
-for s in subdirs :
-    if not os.path.exists(os.path.join(args.indir, s)) : continue
-    for l in os.listdir(os.path.join(args.indir, s)) :
-        if l[-4:].lower() == '.xml' :
-            alllocales.add(l[:-4])
-
-if args.remove:
+    alllocales = set()
     existinglocales = set()
-    for s in os.listdir(args.outdir):
-        sp = os.path.join(args.outdir, s)
-        if os.path.isdir(sp):
-            for l in os.listdir(sp):
-                if l[-4:].lower() == ".xml":
-                    existinglocales.add(l[:-4])
-
-lagen = lookup('en')        # load the langtags module to share with subprocesses
-# define this function after declaring args so we can access args within it
-def doit(a) :
-    curr = None
-    allfiles = []
     for s in subdirs :
-        f = os.path.join(args.indir, s, a + '.xml')
-        if os.path.exists(f) :
-            allfiles.append(f)
-            l = LdmlMerge(f)
-            if curr is not None :
-                curr.overlay(l)
+        if not os.path.exists(os.path.join(args.indir, s)) : continue
+        for l in os.listdir(os.path.join(args.indir, s)) :
+            if l[-4:].lower() == '.xml' :
+                alllocales.add(l[:-4])
+
+    if args.remove:
+        existinglocales = set()
+        for s in os.listdir(args.outdir):
+            sp = os.path.join(args.outdir, s)
+            if os.path.isdir(sp):
+                for l in os.listdir(sp):
+                    if l[-4:].lower() == ".xml":
+                        existinglocales.add(l[:-4])
+
+    lagen = lookup('en')        # load the langtags module to share with subprocesses
+    # define this function after declaring args so we can access args within it
+    def doit(a) :
+        curr = None
+        allfiles = []
+        for s in subdirs :
+            f = os.path.join(args.indir, s, a + '.xml')
+            if os.path.exists(f) :
+                allfiles.append(f)
+                l = LdmlMerge(f)
+                if curr is not None :
+                    curr.overlay(l)
+                else :
+                    curr = l
+        if curr is not None :
+            curr.normalise()
+            ltag = lookup(a.replace("_", "-"))
+            extras = {}
+            if ltag is not None:
+                extras['script'] = ltag.script
+                extras['defaultRegion'] = ltag.region
+            if args.seed :
+                curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed', **extras)
             else :
-                curr = l
-    if curr is not None :
-        curr.normalise()
-        ltag = lookup(a.replace("_", "-"))
-        extras = {}
-        if ltag is not None:
-            extras['script'] = ltag.script
-            extras['defaultRegion'] = ltag.region
-        if args.seed :
-            curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed', **extras)
-        else :
-            curr.add_silidentity(draft = 'approved', source = 'cldr', **extras)
-        if args.hg :
-            dohg(curr, allfiles)
-        p = os.path.join(args.outdir, a[0])
-        os.makedirs(p, exist_ok=True)
-        outfh = codecs.open(os.path.join(p, a + '.xml'), "w", encoding="utf-8")
-        curr.serialize_xml(outfh.write, topns=args.topns)
-        outfh.close()
+                curr.add_silidentity(draft = 'approved', source = 'cldr', **extras)
+            if args.hg :
+                dohg(curr, allfiles)
+            p = os.path.join(args.outdir, a[0])
+            os.makedirs(p, exist_ok=True)
+            outfh = codecs.open(os.path.join(p, a + '.xml'), "w", encoding="utf-8")
+            curr.serialize_xml(outfh.write, topns=args.topns)
+            outfh.close()
 
-def dohg(l, files) :
-    cmd = ["hg", "log", "-R", os.path.join(args.indir, '..'), "-l", "1", "--template", "{svnrev}\n{isodate(date)}"]
-    cmd.extend(files)
-    clog = subprocess.check_output(cmd)
-    (rev, date) = clog.split("\n")
-    i = l.root.find("identity")
-    r = i.find("version")
-    if r is None :
-        r = et.SubElement(i, "version")
-    r.set('number', "$Revision: {} $".format(rev))
-    d = i.find("generation")
-    if d is None :
-        d = et.SubElement(i, "generation")
-    d.set("date", "$Date: {} $".format(date))
+    def dohg(l, files) :
+        cmd = ["hg", "log", "-R", os.path.join(args.indir, '..'), "-l", "1", "--template", "{svnrev}\n{isodate(date)}"]
+        cmd.extend(files)
+        clog = subprocess.check_output(cmd).decode('utf-8')
+        (rev, date) = clog.split("\n")
+        i = l.root.find("identity")
+        r = i.find("version")
+        if r is None :
+            r = et.SubElement(i, "version")
+        r.set('number', "$Revision: {} $".format(rev))
+        d = i.find("generation")
+        if d is None :
+            d = et.SubElement(i, "generation")
+        d.set("date", "$Date: {} $".format(date))
 
-if not args.single :
-    pool = Pool()
-    pool.map_async(doit, alllocales)
-    pool.close()
-    pool.join()
-else :
-    for l in alllocales :
-        doit(l)
+    if not args.single :
+        pool = Pool()
+        pool.map_async(doit, alllocales)
+        pool.close()
+        pool.join()
+    else :
+        for l in alllocales :
+            doit(l)
 
-if args.remove:
-    for l in existinglocales - alllocales:
-        fp = os.path.join(args.outdir, l[0], l+".xml")
-        if os.path.exists(fp):
-            os.unlink(fp)
+    if args.remove:
+        for l in existinglocales - alllocales:
+            fp = os.path.join(args.outdir, l[0], l+".xml")
+            if os.path.exists(fp):
+                os.unlink(fp)
+
+if __name__ == '__main__':
+    main()

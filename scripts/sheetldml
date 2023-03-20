@@ -9,48 +9,52 @@ import argparse
 import sys
 from sldr.sheet import Sheet
 
-# define command line arguments 
-parser = argparse.ArgumentParser(description="Spreadsheet to LDML file")
-parser.add_argument("sheetname",help="LibreOffice calc file (or, if -t specified, a tab separated value file)")
-parser.add_argument("ldmlname",help="name of LDML file")
-parser.add_argument("-v","--verbose",help="print processing details",action='store_true')
-parser.add_argument("-t","--tsv",help="sheetname is a tab separated value file (cannot be used with -o)",action='store_true')
-parser.add_argument("-o","--output",help="new LibreOffice calc file (cannot be used with -t)")
-args = parser.parse_args()
+def main():
+    # define command line arguments 
+    parser = argparse.ArgumentParser(description="Spreadsheet to LDML file")
+    parser.add_argument("sheetname",help="LibreOffice calc file (or, if -t specified, a tab separated value file)")
+    parser.add_argument("ldmlname",help="name of LDML file")
+    parser.add_argument("-v","--verbose",help="print processing details",action='store_true')
+    parser.add_argument("-t","--tsv",help="sheetname is a tab separated value file (cannot be used with -o)",action='store_true')
+    parser.add_argument("-o","--output",help="new LibreOffice calc file (cannot be used with -t)")
+    args = parser.parse_args()
 
-# three scenarios:
-# (1) read from TSV file (args.sheetname), create LDML file
-# -t input.tsv output.ldml
-# (2) read from ods file (args.sheetname), create LDML file
-# input.ods output.ldml
-# (3) read ods template file, read from LDML file, create new ods file
-# -o output.ods template.ods input.ldml
-### Possibly expand option (1) to allow for reading multiple .tsv files, which have been exported for each sheet of the spreadsheet file
+    # three scenarios:
+    # (1) read from TSV file (args.sheetname), create LDML file
+    # -t input.tsv output.ldml
+    # (2) read from ods file (args.sheetname), create LDML file
+    # input.ods output.ldml
+    # (3) read ods template file, read from LDML file, create new ods file
+    # -o output.ods template.ods input.ldml
+    ### Possibly expand option (1) to allow for reading multiple .tsv files, which have been exported for each sheet of the spreadsheet file
 
-if args.tsv:
-    tsvfile = args.sheetname
-    odsfile = None
-else:
-    tsvfile = None
-    odsfile = args.sheetname
-
-if args.output:
     if args.tsv:
-        print("Cannot combine -t and -o options")
-        sys.exit(2)
-    ldmlfile = args.ldmlname
-    ldmloutputfile = None
-    odsoutputfile = args.output
-else:
-    ldmlfile = None # to create new empty LDML file, which eventually will be written to args.ldmlname
-    ldmloutputfile = args.ldmlname
-    odsoutputfile = None
+        tsvfile = args.sheetname
+        odsfile = None
+    else:
+        tsvfile = None
+        odsfile = args.sheetname
 
-s = Sheet(tsvfile, odsfile, ldmlfile)
+    if args.output:
+        if args.tsv:
+            print("Cannot combine -t and -o options")
+            sys.exit(2)
+        ldmlfile = args.ldmlname
+        ldmloutputfile = None
+        odsoutputfile = args.output
+    else:
+        ldmlfile = None # to create new empty LDML file, which eventually will be written to args.ldmlname
+        ldmloutputfile = args.ldmlname
+        odsoutputfile = None
 
-s.process(args.verbose)
+    s = Sheet(tsvfile, odsfile, ldmlfile)
 
-if ldmloutputfile:
-    s.writeldml(ldmloutputfile)
-if odsoutputfile:
-    s.writeods(odsoutputfile)
+    s.process(args.verbose)
+
+    if ldmloutputfile:
+        s.writeldml(ldmloutputfile)
+    if odsoutputfile:
+        s.writeods(odsoutputfile)
+
+if __name__ == "__main__":
+    main()

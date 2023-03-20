@@ -2,7 +2,7 @@
 # python3 hides the python implementation behind the c implementation
 # the c implementation requires the c implementation of treebuilder
 # and so we can't set a comment handler on the c implementation
-
+import warnings
 from xml.parsers import expat
 from xml.etree.ElementTree import Element, ParseError
 
@@ -120,13 +120,13 @@ class XMLParser:
             parser.CharacterDataHandler = target.data
         # miscellaneous callbacks
         if hasattr(target, 'comment'):
-            parser.CommentHandler = target.comment
+            parser.CommentHandler = target.comment # type: ignore
         if hasattr(target, 'pi'):
-            parser.ProcessingInstructionHandler = target.pi
+            parser.ProcessingInstructionHandler = target.pi # type: ignore
         # Configure pyexpat: buffering, new-style attribute handling.
-        parser.buffer_text = 1
-        parser.ordered_attributes = 1
-        parser.specified_attributes = 1
+        parser.buffer_text = True
+        parser.ordered_attributes = True
+        parser.specified_attributes = True
         self._doctype = None
         self.entity = {}
         try:
@@ -145,25 +145,25 @@ class XMLParser:
         append = events_queue.append
         for event_name in events_to_report:
             if event_name == "start":
-                parser.ordered_attributes = 1
-                parser.specified_attributes = 1
-                def handler(tag, attrib_in, event=event_name, append=append,
+                parser.ordered_attributes = True
+                parser.specified_attributes = True
+                def __start_handler(tag, attrib_in, event=event_name, append=append,
                             start=self._start):
                     append((event, start(tag, attrib_in)))
-                parser.StartElementHandler = handler
+                parser.StartElementHandler = __start_handler
             elif event_name == "end":
-                def handler(tag, event=event_name, append=append,
+                def __end_handler(tag, event=event_name, append=append,
                             end=self._end):
                     append((event, end(tag)))
-                parser.EndElementHandler = handler
+                parser.EndElementHandler = __end_handler
             elif event_name == "start-ns":
-                def handler(prefix, uri, event=event_name, append=append):
+                def __start_ns_handler(prefix, uri, event=event_name, append=append):
                     append((event, (prefix or "", uri or "")))
-                parser.StartNamespaceDeclHandler = handler
+                parser.StartNamespaceDeclHandler = __start_ns_handler
             elif event_name == "end-ns":
-                def handler(prefix, event=event_name, append=append):
+                def __end_ns_handler(prefix, event=event_name, append=append):
                     append((event, None))
-                parser.EndNamespaceDeclHandler = handler
+                parser.EndNamespaceDeclHandler = __end_ns_handler
             else:
                 raise ValueError("unknown event %r" % event_name)
 
@@ -244,10 +244,10 @@ class XMLParser:
                 else:
                     return
                 if hasattr(self.target, "doctype"):
-                    self.target.doctype(name, pubid, system[1:-1])
-                elif self.doctype != self._XMLParser__doctype:
+                    self.target.doctype(name, pubid, system[1:-1]) # type: ignore
+                elif self.doctype != self.__doctype:
                     # warn about deprecated call
-                    self._XMLParser__doctype(name, pubid, system[1:-1])
+                    self.__doctype(name, pubid, system[1:-1])
                     self.doctype(name, pubid, system[1:-1])
                 self._doctype = None
 
@@ -270,14 +270,14 @@ class XMLParser:
     def feed(self, data):
         """Feed encoded data to parser."""
         try:
-            self.parser.Parse(data, 0)
+            self.parser.Parse(data, False)
         except self._error as v:
             self._raiseerror(v)
 
     def close(self):
         """Finish feeding data to parser and return element structure."""
         try:
-            self.parser.Parse("", 1) # end of data
+            self.parser.Parse("", True) # end of data
         except self._error as v:
             self._raiseerror(v)
         try:

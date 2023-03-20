@@ -3,6 +3,7 @@
 import argparse, sys, re
 from xml.etree import ElementTree as et
 from sldr.py3xmlparser import XMLParser, TreeBuilder
+from typing import Any, Callable, ClassVar
 
 _elementprotect = {
     '&': '&amp;',
@@ -13,19 +14,25 @@ _attribprotect['"'] = '&quot;'
 
 cldrtns = "{urn://unicode.org/cldr/types/0.1}"
 
-class ETWriter(object):
+class ETWriter:
     """ General purpose ElementTree pretty printer complete with options for attribute order
         beyond simple sorting, and which elements should use cdata """
+    nscount: ClassVar[int] = 0
+    indent: ClassVar[str] = "  "
 
-    nscount = 0
-    indent = "  "
+    root: et.Element | None
+    namespaces: dict[str,str]
+    attributeOrder: dict
+    maxAts: int
+    takesCData: set
 
     def __init__(self, root, namespaces = None, attributeOrder = {}, takesCData = set()):
         self.root = root
-        self.namespaces = namespaces
-        if self.namespaces is None:
+        if namespaces is None:
             self.namespaces = {'http://www.w3.org/XML/1998/namespaces': 'xml',
                                cldrtns[1:-1]: 'cldr'}
+        else:
+            self.namespaces = namespaces
         self.attributeOrder = attributeOrder
         self.maxAts = len(attributeOrder)
         self.takesCData = takesCData
@@ -33,7 +40,7 @@ class ETWriter(object):
     def parse(self, fname, reverse=False):
         if fname is None:
             self.root = getattr(et, '_Element_Py', et.Element)('ldml')
-            self.root.document = self
+            self.root.document = self # type: ignore
             self.default_draft = 'unconfirmed'
             return
         elif isinstance(fname, str):
@@ -41,20 +48,20 @@ class ETWriter(object):
             fh = open(self.fname, 'rb')     # expat does utf-8 decoding itself. Don't do it twice
         else:
             fh = fname
-        if hasattr(et, '_Element_Py'):
-            tb = TreeBuilder(element_factory=et._Element_Py)
-        else:
-            tb = TreeBuilder()
+        tb = TreeBuilder(element_factory=getattr(et, '_Element_Py', None))
         parser = XMLParser(target=tb, encoding="UTF-8")
-        def doComment(data):
+
+        def doComment(data: str):
+            parser.parser.StartElementHandler("!--", ['text', data]) # type: ignore
+            parser.parser.EndElementHandler("!--") # type: ignore
             # resubmit as new start tag=!-- and sort out in main loop
-            parser.parser.StartElementHandler("!--", ('text', data))
-            parser.parser.EndElementHandler("!--")
+
         parser.parser.CommentHandler = doComment
         last = None
         curr = None
-        for event, elem in et.iterparse(fh, events=('start', 'start-ns', 'end'), parser=parser):
+        for event, elem in et.iterparse(fh, events=('start', 'start-ns', 'end'), parser=parser): # type: ignore
             if event == 'start-ns':
+                assert elem is not None
                 self.namespaces[elem[1]] = elem[0]
             elif event == 'start':
                 elem.document = self
@@ -100,15 +107,15 @@ class ETWriter(object):
                     c += ":"+v
                 last.commentsafter = getattr(last, 'commentsafter', []).append(c)
 
-    def _localisens(self, tag):
+    def _localisens(self, tag: str) -> tuple[str, str | None, str | None]:
         ''' Convert {url}localname into ns:localname'''
         if tag[0] == '{':
             ns, localname = tag[1:].split('}', 1)
             qname = self.namespaces.get(ns, '')
             if qname:
-                return ('{}:{}'.format(qname, localname), qname, ns)
+                return (f'{qname}:{localname}', qname, ns)
             else:
-                self.nscount += 1
+                ETWriter.nscount += 1
                 return (localname, 'ns' + str(self.nscount), ns)
         else:
             return (tag, None, None)
@@ -125,6 +132,7 @@ class ETWriter(object):
                 (lt, lq, lns) = self._localisens(k)
                 if lns and lns not in namespaces:
                     namespaces[lns] = lq
+                    assert lq is not None
                     localattribs['xmlns:'+lq] = lns
                 localattribs[lt] = v
         
@@ -141,10 +149,12 @@ class ETWriter(object):
             base = self.root
             write('<?xml version="1.0" encoding="utf-8"?>\n')
             namespaces['http://www.w3.org/XML/1998/namespace'] = 'xml'
+        assert base is not None
         (tag, q, ns) = self._localisens(base.tag)
         localattribs = {}
         if ns and ns not in namespaces:
             namespaces[ns] = q
+            assert q is not None
             localattribs['xmlns:'+q] = ns
         if topns:
             if base == self.root:
@@ -157,6 +167,7 @@ class ETWriter(object):
                 (lt, lq, lns) = self._localisens(c.tag)
                 if lns and lns not in namespaces:
                     namespaces[lns] = q
+                    assert lq is not None
                     localattribs['xmlns:'+lq] = lns
         self._nsprotectattribs(getattr(base, 'attrib', None), localattribs, namespaces)
         for c in getattr(base, 'comments', []):
@@ -165,8 +176,8 @@ class ETWriter(object):
         if len(localattribs):
             def getorder(x):
                 return self.attributeOrder.get(tag, {}).get(x, self.maxAts)
-            def cmpattrib(x, y):
-                return cmp(getorder(x), getorder(y)) or cmp(x, y)
+            # def cmpattrib(x, y):
+            #     return cmp(getorder(x), getorder(y)) or cmp(x, y)
             for k in self._sortedattrs(base, localattribs):
                 write(' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
         if len(base):
@@ -187,7 +198,7 @@ class ETWriter(object):
 
     def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
-        with codecs.open(fname, "w", encoding="utf-8") as outf:
+        with open(fname, "w", encoding="utf-8") as outf:
             self.serialize_xml(outf.write, base=base, indent=indent, topns=topns, namespaces=namespaces)
 
     def add_namespace(self, q, ns):
@@ -217,22 +228,26 @@ class ETWriter(object):
         """ Create a new SubElement and do localns replacement as in ns:tag -> {url}tag"""
         tag = self._reverselocalns(tag)
         kw = {self._reverselocalns(k): v for k, v in kw.items() if v is not None}
-        return et.SubElement(parent, tag, **k)
+        return et.SubElement(parent, tag, **kw)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("infile", help="Input file")
-parser.add_argument("-o","--outfile", help="Output file")
-parser.add_argument("-r","--reverse",action="store_true",help="Convert attributes to comments")
-args = parser.parse_args()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("infile", help="Input file")
+    parser.add_argument("-o","--outfile", help="Output file")
+    parser.add_argument("-r","--reverse",action="store_true",help="Convert attributes to comments")
+    args = parser.parse_args()
 
-doc = ETWriter(None)
-doc.parse(args.infile)
-if args.outfile is not None:
-    outf = open(args.outfile, "w")
-    writer = outf.write
-else:
-    outf = None
-    writer = sys.stdout.write
-doc.serialize_xml(writer)
-if outf is not None:
-    outf.close()
+    doc = ETWriter(None)
+    doc.parse(args.infile)
+    if args.outfile is not None:
+        outf = open(args.outfile, "w")
+        writer = outf.write
+    else:
+        outf = None
+        writer = sys.stdout.write
+    doc.serialize_xml(writer)
+    if outf is not None:
+        outf.close()
+
+if __name__ == "__main__":
+    main()

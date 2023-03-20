@@ -5,51 +5,55 @@ from sldr.ldml import Ldml, iterate_files
 import argparse, os
 import sldr.UnicodeSets as usets
 
-parser = argparse.ArgumentParser()
-parser.add_argument("indir",help="Root of SLDR file tree")
-parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
-args = parser.parse_args()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("indir",help="Root of SLDR file tree")
+    parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
+    args = parser.parse_args()
 
-if args.ldml:
-    allfiles = [os.path.join(args.indir, args.ldml[0], args.ldml+".xml")]
-else:
-    allfiles = iterate_files(args.indir)
+    if args.ldml:
+        allfiles = [os.path.join(args.indir, args.ldml[0], args.ldml+".xml")]
+    else:
+        allfiles = iterate_files(args.indir)
 
-for f in allfiles:
-    l = Ldml(f)
-    if len(l.root) == 1 and l.root[0].tag == "identity":
-        continue
-    ident = l.find(".//identity/special/sil:identity")
-    if ident is None or ident.get("source", "") == "cldr":
-        continue
-    name = os.path.splitext(os.path.basename(f))[0].replace("_", "-")
-    tagset = lookup(name, "")
-    if tagset == "":
-        print("No langtag for " + name)
-        continue
-    ename = getattr(tagset, "name", None)
-    if ename is not None:
-        nameel = l.ensure_path('localeDisplayNames/special/sil:names/sil:name[@xml:lang="en"]')[0]
-        if nameel.text is None:
-            nameel.text = ename
-    lnames = getattr(tagset, "localnames", [getattr(tagset, 'localname', None)])
-    if lnames != [None]:
-        main = ""
-        for e in l.findall('.//characters/exemplarCharacters'):
-            t = e.get('type', None)
-            if t or not e.text: continue
-            main = usets.parse(e.text, 'NFD')[0].asSet()
-            break
-        for c in ("\uA78C", "\u02BC"):
-            if c in main:
-                lnames = [s.replace("'", c) for s in lnames]
+    for f in allfiles:
+        l = Ldml(f)
+        if len(l.root) == 1 and l.root[0].tag == "identity":
+            continue
+        ident = l.find(".//identity/special/sil:identity")
+        if ident is None or ident.get("source", "") == "cldr":
+            continue
+        name = os.path.splitext(os.path.basename(f))[0].replace("_", "-")
+        tagset = lookup(name, "")
+        if tagset == "":
+            print("No langtag for " + name)
+            continue
+        ename = getattr(tagset, "name", None)
+        if ename is not None:
+            nameel = l.ensure_path('localeDisplayNames/special/sil:names/sil:name[@xml:lang="en"]')[0]
+            if nameel.text is None:
+                nameel.text = ename
+        lnames = getattr(tagset, "localnames", [getattr(tagset, 'localname', None)])
+        if lnames != [None]:
+            main = ""
+            for e in l.findall('.//characters/exemplarCharacters'):
+                t = e.get('type', None)
+                if t or not e.text: continue
+                main = usets.parse(e.text, 'NFD')[0].asSet()
                 break
-    lname = lnames[0]
-    if lname is not None:
-        nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(name))[0]
-        if nameel.text is None:
-            if nameel.text != lname and nameel.text not in lnames:
-                print("Name difference for {} has {}, changing to {}".format(name, nameel.text, lname))
-            nameel.text = lname
-    l.normalise()
-    l.save_as(f)
+            for c in ("\uA78C", "\u02BC"):
+                if c in main:
+                    lnames = [s.replace("'", c) for s in lnames]
+                    break
+        lname = lnames[0]
+        if lname is not None:
+            nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(name))[0]
+            if nameel.text is None:
+                if nameel.text != lname and nameel.text not in lnames:
+                    print("Name difference for {} has {}, changing to {}".format(name, nameel.text, lname))
+                nameel.text = lname
+        l.normalise()
+        l.save_as(f)
+
+if __name__ == "__main__":
+    main()
