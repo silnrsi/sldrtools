@@ -22,43 +22,46 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
 ]
 dependencies = [
-    "cssutils",
     "langtag @ git+https://github.com/silnrsi/langtags@master",
     "lxml",
-    "odfpy",
     "pyicu",
-    "scikit_learn"
 ]
+
+[project.optional-dependencies]
+css = ["cssutils"]
+odf = ["odfpy"]
+sklearn = ["scikit_learn"]
+xml = ["lxml"]
 
 [project.urls]
 "Homepage" = "http://github.com/silnrsi/sldrtools/README.md"
 "Repository" = "http://github.com/silnrsi/sldrtools"
 
+[project.scripts]
+cldrimport = "sldr.tools.cldrimport:main"
+fixsldr = "sldr.tools.fixsldr:main"
+fontmatch = "sldr.tools.fontmatch:main"
+fontrules = "sldr.tools.fontrules:main"
+hackldmlattribs = "sldr.tools.hackldmlattribs:main"
+icubreaktext = "sldr.tools.icubreaktext:main"
+icupretty = "sldr.tools.icupretty:main"
+kbdtest = "sldr.tools.kbdtest:main"
+ldmlflatten = "sldr.tools.ldmlflatten:main"
+ldmlmerge = "sldr.tools.ldmlmerge:main"
+ldmlnormalize = "sldr.tools.ldmlnormalize:main"
+proccldrcomments = "sldr.tools.proccldrcomments:main"
+sheetldml = "sldr.tools.sheetldml:main"
+sldraddfonts = "sldr.tools.sldraddfonts:main"
+sldraddkeymans = "sldr.tools.sldraddkeymans:main"
+sldrautonames = "sldr.tools.sldrautonames:main"
+sldrcoverage = "sldr.tools.sldrcoverage:main"
+zonetab = "sldr.tools.zonetab:main"
+
 [tool.setuptools]
 platforms = ["Linux", "Win32", "Mac OS X"]
 zip-safe = false
-#packages.find = { where = ["lib"] }
-package-dir = { "" = "lib" }
-packages = ["sldr"]
+packages.find = { where = ["lib"] }
 script-files = [
-    "scripts/cldrimport",
-    "scripts/fontmatch",
-    "scripts/icubreaktext",
-    "scripts/ldmlflatten",
-    "scripts/proccldrcomments",
-    "scripts/sldraddkeymans",
     "scripts/sldr-flat-publish.sh",
     "scripts/cldrupdate",
-    "scripts/fontrules",
-    "scripts/icupretty",
-    "scripts/ldmlmerge",
-    "scripts/sheetldml",
-    "scripts/sldrautonames",
-    "scripts/zonetab",
-    "scripts/fixsldr",
-    "scripts/hackldmlattribs",
-    "scripts/kbdtest",
-    "scripts/ldmlnormalize",
-    "scripts/sldraddfonts",
-    "scripts/sldrcoverage"
 ]
