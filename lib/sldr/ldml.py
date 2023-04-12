@@ -51,12 +51,11 @@ def getldml(loc, indirs):
 
 _elementprotect = {
     '&': '&amp;',
-    '"': '&quot;',
-    "'": '&apos;',
     '<': '&lt;',
     '>': '&gt;' }
 _attribprotect = dict(_elementprotect)
 _attribprotect['"'] = '&quot;'
+_attribprotect["'"] = '&apos;'
 
 _basenamespaces = {
     'urn://www.sil.org/ldml/0.1':           'sil',
