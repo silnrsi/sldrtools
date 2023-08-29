@@ -241,6 +241,13 @@ class UCDTests(unittest.TestCase):
         text = u'\u0061\u0315\u0300\u05AE\u1ACC\u0062'
         self.assertEqual(u'\u0061\u05AE\u0300\u1ACC\u0315\u0062', self.ucd.normalize('NFD', text))
 
+    def ignore_nfc_tus15(self):
+        text = u'\u0061\u0315\u0300\u05AE\u1E4EF\u0062'
+        self.assertEqual(u'\u00E0\u05AE\u1E4EF\u0315\u0062', self.ucd.normalize('NFC', text))
+
+    def ignore_nfd_tus15(self):
+        text = u'\u0061\u0315\u0300\u05AE\u1E4EF\u0062'
+        self.assertEqual(u'\u0061\u05AE\u0300\u1E4EF\u0315\u0062', self.ucd.normalize('NFD', text))
 
 class ExemplarsTests(unittest.TestCase):
 
@@ -548,7 +555,7 @@ class ExemplarsTests(unittest.TestCase):
 
     def test_undetermined_script(self):
         """Handle a script that ICU does not know about."""
-        self.exemplars.process('\U00010F77')
+        self.exemplars.process('\U0001DEB0')
         self.exemplars.analyze()
         self.assertEqual('Zzzz', self.exemplars.script)
 
