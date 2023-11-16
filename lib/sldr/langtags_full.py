@@ -397,6 +397,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                         currlang = l[8:]
                         if mode != "variant":
                             tag = LangTag(lang=currlang)
+                            tag.mode = mode
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
                     tag.script = l[17:]
                     tag.hidescript = True
