@@ -95,7 +95,7 @@ def doit(l) :
         else :
             outf = os.path.join(args.outdir, l + '.xml')
         if not os.path.exists(os.path.dirname(outf)) :
-            os.makedirs(os.path.dirname(outf))
+            os.makedirs(os.path.dirname(outf), exist_ok=True)
         curr.normalise()
         if int(args.debug) & 2:
             print(outf)
