@@ -192,6 +192,14 @@ class LangTag(object) :
             self.hideregion = tag.hideregion
         if not self.hideboth:
             self.hideboth = tag.hideboth
+        if tag.variants is not None and self.variants is None:
+            self.variants = tag.variants
+        if tag.extensions is not None:
+            if self.extensions is None:
+                self.extensions = {}
+            for k, v in tag.extensions.items():
+                if k not in self.extensions:
+                    self.extensions[k] = v[:]
         if not len(getattr(self, 'desc', [])) and len(getattr(tag, 'desc', [])):
             self.desc = tag.desc
         return True
@@ -389,6 +397,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                         currlang = l[8:]
                         if mode != "variant":
                             tag = LangTag(lang=currlang)
+                            tag.mode = mode
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
                     tag.script = l[17:]
                     tag.hidescript = True
