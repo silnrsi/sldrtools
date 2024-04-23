@@ -77,6 +77,8 @@ class LdmlMerge(Ldml):
         other = getattr(other, 'root', other)
         for o in other:
             # simple if for now, if more use a dict
+            if o.tag in self.blocks:
+                continue
             if o.tag == '{'+self.silns+'}external-resources':
                 self._overlay_external_resources(o, this, usedrafts)
             else:
