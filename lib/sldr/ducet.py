@@ -40,7 +40,11 @@ def ducetCompare(ducetDict, str1, str2) :
         sortKey1 = _generateSortKey(ducetDict[str1])
         sortKey2 = _generateSortKey(ducetDict[str2])
     except KeyError:
-        return "unknown"
+        try:
+            sortKey1 = _generateSortKey(ducetDict[str1[0]])
+            sortKey2 = _generateSortKey(ducetDict[str2[0]])
+        except KeyError:
+            return "unknown"
 
     minSKlen = min(len(sortKey1), len(sortKey2))
 
@@ -116,4 +120,4 @@ def keyfn(myducetDict, level=4):
             return ducetCompare(self.ducetDict, self.obj, other.obj) >= 0
         def __str__(self):
             return " ".join(_generateSortKey(self.ducetDict[self.obj]))
-
+    return K
