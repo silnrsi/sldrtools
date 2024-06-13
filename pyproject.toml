@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
     "langtag @ git+https://github.com/silnrsi/langtags@master",
     "lxml",
-    "pyicu",
+    'pyicu ; platform_system != "Windows"',
 ]
 
 [project.optional-dependencies]
