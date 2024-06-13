@@ -33,7 +33,7 @@ class Iana(object):
 
     def parse(self, path):
         currtag = {}
-        with open(path, "r") as fh:
+        with open(path, "r", encoding='utf-8') as fh:
             for l in fh.readlines():
                 if l.startswith(" "):
                     currtag[currfield] += " " + l.strip()

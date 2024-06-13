@@ -101,8 +101,9 @@ def _generateSortKey(rawSortKey, separate=False) :
             
 # leveledResult = [[ki[level] for ki in rawSortKey] for level in range(3)]
   
-def keyfn(ducetDict, level=4):
+def keyfn(myducetDict, level=4):
     class K:
+        ducetDict = myducetDict
         def __init__(self, obj, *a):
             self.obj = obj
         def __lt__(self, other):

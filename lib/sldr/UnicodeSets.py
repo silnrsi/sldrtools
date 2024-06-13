@@ -233,7 +233,7 @@ def parseitem(s, ind, lastitem, end, usegroups=False):
         item = None
         res.setclass(True)
         e = s.index(']', ind)
-        while e > 0 and s[e-1] == '\\':
+        while e > 0 and s[e-1] == '\\' and s[e-2] != '\\':
             e = s.index(']', e+1)
         while ind < e:
             (ind, item, nextitem) = parseitem(s, ind, item, e)

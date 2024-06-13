@@ -51,12 +51,11 @@ def getldml(loc, indirs):
 
 _elementprotect = {
     '&': '&amp;',
-    '"': '&quot;',
-    "'": '&apos;',
     '<': '&lt;',
     '>': '&gt;' }
 _attribprotect = dict(_elementprotect)
 _attribprotect['"'] = '&quot;'
+_attribprotect["'"] = '&apos;'
 
 _basenamespaces = {
     'urn://www.sil.org/ldml/0.1':           'sil',
@@ -343,7 +342,7 @@ class Ldml(ETWriter):
         cls.attribvals = {}
         attribCount = {}
         cls.maxEls = 0
-        cls.blocks = []
+        cls.blocks = ["identity", "collation"]
         def procmodel(name, nodes, cls, elementCount):
             for n in nodes:
                 if n[2] is not None:
