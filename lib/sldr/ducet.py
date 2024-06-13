@@ -36,11 +36,22 @@ def _cmp(a, b):
     return (a > b) - (a < b)
 
 def ducetCompare(ducetDict, str1, str2) :
+    multigraph = False
     try:
         sortKey1 = _generateSortKey(ducetDict[str1])
         sortKey2 = _generateSortKey(ducetDict[str2])
     except KeyError:
-        return "unknown"
+        try:
+            sortKey1 = _generateSortKey(ducetDict[str1[0]])
+            sortKey2 = _generateSortKey(ducetDict[str2[0]])
+            for i in range(min(len(str1), len(str2))):
+                if str1[i].lower() == str2[i].lower() and ((str1[i].isupper() and str2[i].islower()) or (str1[i].islower() and str2[i].isupper())):
+                    sortKey1b = _generateSortKey(ducetDict[str1[i]])
+                    sortKey2b = _generateSortKey(ducetDict[str2[i]])
+                    multigraph = True
+                    break
+        except KeyError:
+            return "unknown"
 
     minSKlen = min(len(sortKey1), len(sortKey2))
 
@@ -55,6 +66,21 @@ def ducetCompare(ducetDict, str1, str2) :
             level1 += 1
         if sortKey2[i] == 0 :
             level2 += 1
+    
+    if multigraph:
+        minSKlenb = min(len(sortKey1b), len(sortKey2b))
+
+        level1 = 1
+        level2 = 1
+        for i in range(minSKlenb) :
+            if sortKey1b[i] < sortKey2b[i] :
+                return min(level1, level2)
+            elif sortKey1b[i] > sortKey2b[i] :
+                return min(level1, level2) * -1
+            if sortKey1b[i] == 0 :
+                level1 += 1
+            if sortKey2b[i] == 0 :
+                level2 += 1
 
     # sort keys are equal as far as they go
     return _cmp(len(sortKey1), len(sortKey2)) * 4
@@ -116,4 +142,4 @@ def keyfn(myducetDict, level=4):
             return ducetCompare(self.ducetDict, self.obj, other.obj) >= 0
         def __str__(self):
             return " ".join(_generateSortKey(self.ducetDict[self.obj]))
-
+    return K
