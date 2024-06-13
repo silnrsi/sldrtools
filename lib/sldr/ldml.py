@@ -40,7 +40,7 @@ def iterate_files(root, ext=".xml"):
                     for w in os.walk(root)), []))
 
 def getldml(loc, indirs):
-    """ Given a langtag and list of root directories, seach for an LDML file and return the object """
+    """ Given a langtag and list of root directories, search for an LDML file and return the object """
     for p in (".", loc[0].lower()):
         for i in indirs:
             filep = os.path.join(i, p, loc.replace("-", "_")+".xml")

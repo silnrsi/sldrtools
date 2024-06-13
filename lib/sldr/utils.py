@@ -125,7 +125,7 @@ def find_parents(langid, to_root = True, needs_sldr = False, match_script = True
                 if os.path.isfile(mintag_file):
                     redundant = True
                     break
-        print("is redunant?:" + str(redundant))
+        print("is redundant?:" + str(redundant))
         return redundant
 
     def parent_loop(root_tag:str, root_tagset, to_root = True, needs_sldr = False, match_script = True, match_region = False):
