@@ -208,17 +208,50 @@ class Collation(dict):
                 v.expand(self, self.ducet)
                 v.sortkey(self, self.ducet, inc)
 
-    def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey):
+    def asICU(self, alphabet, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
+        # needs fix to factor in characters coming before 'a' syntax, see llu.xml in sldr for an example of what that's supposed to look like. this needs to apply to all strengths of sorting
         """Returns ICU tailoring syntax of this Collation"""
         self._setSortKeys()
         lastk = None
         res = ""
         loc = 0
         eqchain = None
+        beforea = True
+        skip = []
         for k, v in sorted(self.items(), key=ordering):
             k = k.rstrip()
             if v.prefix:
                 res += v.prefix
+            if 'a' in alphabet and alphabet.index('a') != 0 and 'a' in self.keys() and beforea:
+                loc = len(res) + 1
+                for y, z in sorted(self.items(), key=ordering):
+                    skip.append(y)
+                    if y == 'a':
+                        beforelvl = z.level
+                    if y == 'A':
+                        break
+                res += "\n&[before " + str(beforelvl) + "]a "
+                res += ("<<<"[:beforelvl]) + " "
+                for i in range(alphabet.index('a')):
+                    res += alphabet[i] + " "
+                    if i == (alphabet.index('a') - 1):
+                        continue
+                    elif alphabet[i] in skip or i == 0: 
+                        newlvl = None
+                        for y, z in sorted(self.items(), key=ordering):
+                            if z.base == alphabet[i]:
+                                newlvl = z.level
+                                res += ("<<<"[:newlvl]) + " "
+                                break
+                        if newlvl == None: 
+                            res += "< "
+                    elif alphabet[i].islower() and alphabet[i].upper() == alphabet[i+1]:
+                        res += "<<< "
+                    else:
+                        res += "< "
+                beforea = False
+            if k in skip:
+                continue
             if v.base != lastk and v.base != eqchain:
                 loc = len(res) + 1
                 res += "\n&" + escape(v.base)
@@ -247,8 +280,8 @@ class Collation(dict):
         '''Given two sorted lists of (k, sortkey(k)) delete from this
             collation any k that is not inserted into the first list.
             I.e. only keep things inserted into the ducet sequence'''
-        a = list(a_arg)
-        b = list(b_arg)
+        a = [k[0] for k in a_arg]
+        b = [k[0] for k in b_arg]
         if len(a) > 0 and len(b) > 0:
             s = SequenceMatcher(a=a, b=b)
             for g in s.get_opcodes():
@@ -256,10 +289,13 @@ class Collation(dict):
                 for i in range(g[3], g[4]):
                     # delete if we have the element
                     #   and the primary sortkey lengths are different
-                    if b[0][i] in self and len(a[1][g[1]+i-g[3]][0]) == len(b[1][i][0]):
-                        del self[b[0][i]]
+                    if b[i] in self:
+                        # old 'and' kept just in case it's needed, but currently breaks some files : and len(a_arg[g[1]+i-g[3]][1][0]) == len(b_arg[i][1][0]):
+                        if b[i] == 'a' and b_arg[i][1][0][0] > a_arg[g[1]+i-g[3]][1][0][0]:
+                            continue
+                        del self[b[i]]
 
-    def minimise(self, alphabet):
+    def minimise(self, alphabet): 
         '''Minimise a sort tailoring such that the minimised tailoring
             functions the same as the unminimised tailoring for the
             strings in alphabet (e.g. main+aux exemplars)'''
@@ -281,7 +317,15 @@ class Collation(dict):
             if len(v) == 1 or k in self:
                 continue
             # remove any non-inserted subsorts in the subsequences
-            self._stripoverlaps(bases[k][1:], v[1:])
+            try:
+                self._stripoverlaps(bases[k][1:], v[1:])
+            except:
+                for i in range(len(v)):
+                    try:
+                        altk = v[i][0]
+                        self._stripoverlaps(bases[altk][1:], v[0:i, i+1:])
+                    except:
+                        continue
 
     def getSortKey(self, s):
         keys = SortKey()
