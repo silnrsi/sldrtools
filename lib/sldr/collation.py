@@ -44,6 +44,9 @@ def ducetSortKey(d, k, extra=None):
         sort key.'''
     res = [[], [], []]
     i = len(k)
+    singlechar = False
+    if len(k) == 1:
+        singlechar = True  
     while i > 0:
         try:
             if extra and k[:i] in extra:
@@ -56,6 +59,8 @@ def ducetSortKey(d, k, extra=None):
         res = [res[j] + list(key[j]) for j in range(3)]
         k = k[i:]
         i = len(k)
+    if singlechar:
+        return SortKey([[v for v in r] for r in res])  # don't strip 0s if the only item in the string features a zero
     return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
 def _filtersame(dat, level):
