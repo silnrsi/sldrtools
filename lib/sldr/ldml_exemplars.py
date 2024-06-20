@@ -293,6 +293,9 @@ class Exemplars(object):
         self.max_multigraph_length = 1
         self.always_separate_marks = set()
         self.need_splitting = True
+        self.uppercase_chars = list()
+        self.lowercase_chars = list()
+        self.non_casing_chars = dict()
 
         self.unittest = False
         self.collator = None
@@ -431,6 +434,7 @@ class Exemplars(object):
         self.parcel_ignorable()
         self.parcel_frequency()
         self.make_index()
+        self.find_non_casing_characters()
 
     def ignore_phantoms(self):
         """Ignore phantom exemplars.
@@ -644,6 +648,15 @@ class Exemplars(object):
             uppercase = self.ucd.toupper(exemplar)
             self._index.add(uppercase)
 
+    def find_non_casing_characters(self):
+        """Return list of characters that never appear in upper/lowercase in the DBL, such as the lowercase saltillo (U+A78C), which many orthographies never capitalize."""
+        for i in self.uppercase_chars:
+            if i.lower() not in self.lowercase_chars:
+                self.non_casing_chars[i] = "only_upper"
+        for i in self.lowercase_chars:
+            if i.upper() not in self.uppercase_chars:
+                self.non_casing_chars[i] = "only_lower"
+
     def allowable(self, char):
         """Make sure exemplars have the needed properties."""
 
@@ -714,7 +727,15 @@ class Exemplars(object):
                 i += 1
                 continue
 
+            if Char.isUUppercase(char) and char not in self.uppercase_chars:
+                self.uppercase_chars.append(char)
+            elif Char.isULowercase(char) and char not in self.lowercase_chars:
+                self.lowercase_chars.append(char)
+
             # Find grapheme clusters.
+            if Char.isUUppercase(char):
+                char = char.lower()
+                #for cases where the translation uses all uppercase. Does make one of the things in self.allowable() in the next section redundant though
 
             # Ensure exemplar base has needed properties.
             if not self.allowable(char):
