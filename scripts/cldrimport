@@ -49,6 +49,8 @@ subdirs = ('main', 'collation', 'casing', 'segments')
 
 alllocales = set()
 for s in subdirs :
+    # collect all the locales in each of the subdirectories in "common" under the 'alllocales' set. 
+    # Since it's a set, duplicates are skipped over, so the resulting set contains every locale in the CLDR
     if not os.path.exists(os.path.join(args.indir, s)) : continue
     for l in os.listdir(os.path.join(args.indir, s)) :
         if l[-4:].lower() == '.xml' :
@@ -56,6 +58,7 @@ for s in subdirs :
 
 if args.remove:
     existinglocales = set()
+    # creates a list of all locales currently stored in the output directory. 
     for s in os.listdir(args.outdir):
         sp = os.path.join(args.outdir, s)
         if os.path.isdir(sp):
@@ -66,18 +69,20 @@ if args.remove:
 lagen = lookup('en')        # load the langtags module to share with subprocesses
 # define this function after declaring args so we can access args within it
 def doit(a) :
+    # 'a' is one locale found in the CLDR, from the 'alllocales' set
     curr = None
-    allfiles = []
+    allfiles = []   # list of CLDR paths every revelant subdirectory this locale appears in (max of 4 paths per locale)
     for s in subdirs :
         f = os.path.join(args.indir, s, a + '.xml')
         if os.path.exists(f) :
             allfiles.append(f)
             l = LdmlMerge(f)
             if curr is not None :
-                curr.overlay(l)
+                curr.overlay(l)     # overlays the data from each different subdirectory file to make one LDML file with all the info
             else :
                 curr = l
     if curr is not None :
+        # normalises the ldml, finds the ltag, and adds the silidentity to the ldml
         curr.normalise()
         try:
             ltag = lookup(a.replace("_", "-"))
@@ -91,8 +96,11 @@ def doit(a) :
             curr.add_silidentity(draft = 'unconfirmed', source = 'cldrseed', **extras)
         else :
             curr.add_silidentity(source = 'cldr', **extras)
+        for b in list(l.root.iter()):
+            b.attrib.pop("references", None)        # remove all reference attributes
         if args.hg :
             dohg(curr, allfiles)
+        # finds/makes the alphabetized directories in the output directory, makes the filepath for the new file, and makes the new file
         p = os.path.join(args.outdir, a[0])
         os.makedirs(p, exist_ok=True)
         outfh = codecs.open(os.path.join(p, a + '.xml'), "w", encoding="utf-8")
