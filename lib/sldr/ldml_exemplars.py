@@ -296,6 +296,7 @@ class Exemplars(object):
         self.uppercase_chars = list()
         self.lowercase_chars = list()
         self.non_casing_chars = dict()
+        self.all_potential_multigraphs = Counter()
 
         self.unittest = False
         self.collator = None
@@ -682,7 +683,7 @@ class Exemplars(object):
 
         return False
 
-    def process(self, text):
+    def process(self, text, maxmultigraphs=False):
         """Analyze a string."""
         i = 0
         text = self.ucd.normalize('NFD', text)
@@ -711,6 +712,13 @@ class Exemplars(object):
                     self.clusters[exemplar] += 1
                     i += multigraph_length
                     break
+            
+            if maxmultigraphs:
+                #swap max multigraph length to 4 to start
+                for multigraph_length in range(4, 0, -1):
+                    multigraph = text[i:i + multigraph_length]
+                    exemplar = Exemplar(multigraph)
+                    self.all_potential_multigraphs[exemplar] += 1
 
             # No multigraphs were found at this position,
             # so continue processing a single character
