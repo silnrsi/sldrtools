@@ -285,8 +285,8 @@ class Collation(dict):
         '''Given two sorted lists of (k, sortkey(k)) delete from this
             collation any k that is not inserted into the first list.
             I.e. only keep things inserted into the ducet sequence'''
-        a = [k[0] for k in a_arg]
-        b = [k[0] for k in b_arg]
+        a = list(a_arg)
+        b = list(b_arg)
         if len(a) > 0 and len(b) > 0:
             s = SequenceMatcher(a=a, b=b)
             for g in s.get_opcodes():
@@ -294,11 +294,10 @@ class Collation(dict):
                 for i in range(g[3], g[4]):
                     # delete if we have the element
                     #   and the primary sortkey lengths are different
-                    if b[i] in self:
-                        # old 'and' kept just in case it's needed, but currently breaks some files : and len(a_arg[g[1]+i-g[3]][1][0]) == len(b_arg[i][1][0]):
-                        if b[i] == 'a' and b_arg[i][1][0][0] > a_arg[g[1]+i-g[3]][1][0][0]:
+                    if b[0][i] in self and len(a[1][g[1]+i-g[3]][0]) == len(b[1][i][0]):
+                        if b[0][i] == 'a' and b_arg[i][1][0][0] > a_arg[g[1]+i-g[3]][1][0][0]:
                             continue
-                        del self[b[i]]
+                        del self[b[0][i]]
 
     def minimise(self, alphabet): 
         '''Minimise a sort tailoring such that the minimised tailoring
