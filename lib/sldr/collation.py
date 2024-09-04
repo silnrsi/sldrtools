@@ -118,6 +118,7 @@ def readDucet(path="") :
 
 
 class SortKey(list):
+    """ List of subkeys for each level. Each subkey is a list of values """
     def append(self, other):
         self[:] = self + other
 
@@ -162,6 +163,8 @@ class SortKey(list):
 
 
 class Collation(dict):
+    """ Dict keyed by sort element string with value a CollElement of the base 
+        and corresponding level """
 
     def __init__(self, ducetDict=None):
         if ducetDict is None:
@@ -174,7 +177,14 @@ class Collation(dict):
         string = re.sub(r'^#.*$', '', string, flags=re.M)
         for n, run in enumerate(string.split('&')):
             bits = [x.strip() for x in re.split(r'([<=]+)', run)]
-            base = unescape(bits[0])
+            m = re.match(r"^\s*&?\s*(?:\[before\s+(\d)\s*\]\s*)?(.*?)\s*$", unescape(bits[0]))
+            if m:
+                base = m.group(2)
+                before = 0
+                if m.group(1):
+                    before = int(m.group(1))
+            else:
+                continue
             for i in range(1, len(bits), 2):
                 s = re.sub(r'\s#.*$', '', bits[i], flags=re.M)
                 if s == '=': l = 4
@@ -191,7 +201,7 @@ class Collation(dict):
                     exp = None
                 while key in self:
                     key += " "
-                self[key] = CollElement(base, l)
+                self[key] = CollElement(base, l, before)
                 self[key].order = (n,i)
                 if prefix:
                     self[key].prefix = prefix
@@ -221,45 +231,17 @@ class Collation(dict):
         res = ""
         loc = 0
         eqchain = None
-        beforea = True
+        lastbefore = 0
         skip = []
         for k, v in sorted(self.items(), key=ordering):
             k = k.rstrip()
             if v.prefix:
                 res += v.prefix
-            if 'a' in alphabet and alphabet.index('a') != 0 and 'a' in self.keys() and beforea:
-                loc = len(res) + 1
-                for y, z in sorted(self.items(), key=ordering):
-                    skip.append(y)
-                    if y == 'a':
-                        beforelvl = z.level
-                    if y == 'A':
-                        break
-                res += "\n&[before " + str(beforelvl) + "]a "
-                res += ("<<<"[:beforelvl]) + " "
-                for i in range(alphabet.index('a')):
-                    res += alphabet[i] + " "
-                    if i == (alphabet.index('a') - 1):
-                        continue
-                    elif alphabet[i] in skip or i == 0: 
-                        newlvl = None
-                        for y, z in sorted(self.items(), key=ordering):
-                            if z.base == alphabet[i]:
-                                newlvl = z.level
-                                res += ("<<<"[:newlvl]) + " "
-                                break
-                        if newlvl == None: 
-                            res += "< "
-                    elif alphabet[i].islower() and alphabet[i].upper() == alphabet[i+1]:
-                        res += "<<< "
-                    else:
-                        res += "< "
-                beforea = False
             if k in skip:
                 continue
-            if v.base != lastk and v.base != eqchain:
+            if v.base != lastk and v.base != eqchain or v.before != lastbefore:
                 loc = len(res) + 1
-                res += "\n&" + escape(v.base)
+                res += "\n&" + (f"[before {v.before}]" if v.before else "") + escape(v.base)
                 eqchain = None
             if wrap and len(res) - loc > wrap:
                 res += "\n"
@@ -281,55 +263,23 @@ class Collation(dict):
             lastk = k
         return res[1:] if len(res) else ""
 
-    def _stripoverlaps(self, a_arg, b_arg):
-        '''Given two sorted lists of (k, sortkey(k)) delete from this
-            collation any k that is not inserted into the first list.
-            I.e. only keep things inserted into the ducet sequence'''
-        a = list(a_arg)
-        b = list(b_arg)
-        if len(a) > 0 and len(b) > 0:
-            s = SequenceMatcher(a=a, b=b)
-            for g in s.get_opcodes():
-                if g[0] == 'insert' or g[0] == 'replace': continue
-                for i in range(g[3], g[4]):
-                    # delete if we have the element
-                    #   and the primary sortkey lengths are different
-                    if b[0][i] in self and len(a[1][g[1]+i-g[3]][0]) == len(b[1][i][0]):
-                        if b[0][i] == 'a' and b_arg[i][1][0][0] > a_arg[g[1]+i-g[3]][1][0][0]:
-                            continue
-                        del self[b[0][i]]
-
-    def minimise(self, alphabet): 
-        '''Minimise a sort tailoring such that the minimised tailoring
-            functions the same as the unminimised tailoring for the
-            strings in alphabet (e.g. main+aux exemplars)'''
+    def minimise(self):
         self._setSortKeys()
-        # create (k, sortkey(k)) for the alphabet from the ducet and from the tailored
-        base = sorted([(x, ducetSortKey(self.ducet, x)) for x in alphabet if x in self.ducet], key=lambda x: x[1])
-        this = sorted([(x, ducetSortKey(self.ducet, x, extra=self)) for x in alphabet], key=lambda x: x[1])
-        # strip down to only primary orders
-        basep = _filtersame(base, 1)
-        thisp = _filtersame(this, 1)
-        # Remove any non-inserted elements
-        self._stripoverlaps(basep, thisp)
-
-        # dict[primary] = list of (k, sortkey(k)) with same primary as primary
-        bases = _makegroupdict(base, lambda x:x[1][0])
-        thiss = _makegroupdict(this, lambda x:x[1][0])
-        for k, v in thiss.items():
-            # no subsorting then ignore, if primary is tailored then all subsorts are tailored too
-            if len(v) == 1 or k in self:
-                continue
-            # remove any non-inserted subsorts in the subsequences
-            try:
-                self._stripoverlaps(bases[k][1:], v[1:])
-            except:
-                for i in range(len(v)):
-                    try:
-                        altk = v[i][0]
-                        self._stripoverlaps(bases[altk][1:], v[0:i, i+1:])
-                    except:
-                        continue
+        # Set whether an element is in the Ducet. Do parents first
+        for i in range(4):
+            for k, v in self.items():
+                if v.level != i+1:
+                    continue
+                base = self.get(v.base, None)
+                baseInDucet = base.inDucet if base is not None else True
+                dkey = ducetSortKey(self.ducet, k)
+                # is the key equal to the ducet key up to the base level
+                v.inDucet = (v.key[:v.level-1] == dkey[:v.level-1]) and baseInDucet and not v.before
+        # Now throw out everything in the DUCET
+        for k, v in list(self.items()):
+            if v.inDucet:
+                del self[k]
+        
 
     def getSortKey(self, s):
         keys = SortKey()
@@ -385,7 +335,7 @@ class Collation(dict):
                     for s in slashItems:
                         if currBase is not None:
                             try:
-                                self[s] = CollElement(currBase, currLevel)
+                                self[s] = CollElement(currBase, currLevel, 0)
                             except KeyError:
                                 continue
                         currLevel = 3
@@ -397,16 +347,19 @@ class Collation(dict):
 
 class CollElement(object):
 
-    def __init__(self, base, level):
+    def __init__(self, base, level, before):
         self.base = base
         self.level = level
+        self.before = before
         self.exp = ""
         self.prefix = ""
         self.shortkey = ""
         self.order = (0,)
+        self.inDucet = False
 
     def __repr__(self):
         res = ">>>>"[:self.level] + self.base
+        res += f"[before {self.before}]" if self.before else ""
         if self.exp:
             return repr(res + "/" + self.exp)
         else:
@@ -434,8 +387,9 @@ class CollElement(object):
             basekey = b.shortkey.copy()
         else:
             basekey = self.key.copy()
+        # Update the copied base SortKey to immediately follow the base
         if self.level < 4 :
-            basekey[self.level-1][-1] += inc
+            basekey[self.level-1][-1] += inc if self.before == 0 else -inc 
         if not self.exp and b is not None and b.exp:
             self.exp = b.exp
         if self.exp:
@@ -450,6 +404,7 @@ class CollElement(object):
         self.key = basekey
         return basekey
 
+
 def main():
     import sys
     coll = Collation()
@@ -457,7 +412,7 @@ def main():
         coll.parse(sys.argv[1])
         alphabet = "a b c d e f g h i j k l m n o p q r s t u v w x y z".split()
         alphabet += coll.keys()
-        coll.minimise(alphabet)
+        coll.minimise()
         print(coll.asICU(alphabet))
 
 if __name__ == '__main__':
