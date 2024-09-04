@@ -296,6 +296,7 @@ class Collation(dict):
                     #   and the primary sortkey lengths are different
                     if b[0][i] in self and len(a[1][g[1]+i-g[3]][0]) == len(b[1][i][0]):
                         if b[0][i] == 'a' and b_arg[i][1][0][0] > a_arg[g[1]+i-g[3]][1][0][0]:
+                            # this addresses when a character comes before 'a'
                             continue
                         del self[b[0][i]]
 
