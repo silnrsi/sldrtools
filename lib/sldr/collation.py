@@ -420,7 +420,7 @@ def main():
     import sys
     coll = Collation()
     if len(sys.argv) > 1:
-        if sum(1 for c in sys.argv[1] if c in "/;") > 10:
+        if "<" not in sys.argv[1]:
             rules = [r.strip() for r in sys.argv[1].split(";")]
             coll.convertSimple(rules)
         else:
