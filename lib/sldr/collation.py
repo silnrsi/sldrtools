@@ -267,21 +267,15 @@ class Collation(dict):
 
     def minimise(self):
         self._setSortKeys()
-        # Set whether an element is in the Ducet. Do parents first
-        for i in range(4):
-            for k, v in self.items():
-                if v.level != i+1:
-                    continue
-                base = self.get(v.base, None)
-                baseInDucet = base.inDucet if base is not None else True
-                dkey = ducetSortKey(self.ducet, k)
-                # is the key equal to the ducet key up to the base level
-                v.inDucet = (v.key[:v.level-1] == dkey[:v.level-1]) and baseInDucet and not v.before
-        # Now throw out everything in the DUCET
-        for k, v in list(self.items()):
-            if v.inDucet:
+        outlist = sorted(self.keys(), key=lambda k:self[k].key)
+        inlist = sorted(self.keys(), key=lambda k:ducetSortKey(self.ducet, k))
+        res = []
+        for m in SequenceMatcher(a=inlist, b=outlist).get_opcodes():
+            if m[0] in ("replace", "insert"):
+                res.extend(outlist[m[3]:m[4]])
+        for k in list(self):
+            if k not in res:
                 del self[k]
-        
 
     def getSortKey(self, s):
         keys = SortKey()
@@ -400,7 +394,7 @@ class CollElement(object):
             basekey = self.key.copy()
         # Update the copied base SortKey to immediately follow the base
         if self.level < 4 :
-            basekey[self.level-1][-1] += inc if self.before != self.level + 1 else -beforeshift 
+            basekey[self.level-1][-1] += inc if not self.before or self.before != self.level else -beforeshift 
         if not self.exp and b is not None and b.exp:
             self.exp = b.exp
         if self.exp:
