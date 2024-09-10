@@ -307,6 +307,7 @@ class Collation(dict):
         alphabet = []
         simple = True
         simplelist = list("abcdefghijklmnopqrstuvwxyz'")
+        hasbefore = False
         if len(valueList) > 0 :
             currBase = None
             for value in valueList :
@@ -320,7 +321,7 @@ class Collation(dict):
                 prevSlashItems = None
                 currLevel = 1
                 for spaceItem in spaceItems :
-                    slashItems = spaceItem.split('/')
+                    slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like xX which should really be x/X
                     if len(slashItems) == 1 and len(slashItems[0]) > 1 and len(slashItems[0]) < 10:
                         s = slashItems[0]
@@ -335,11 +336,19 @@ class Collation(dict):
                         if not len(simplelist) or slashItems[0] != simplelist.pop(0):
                             simple = False
                     for s in slashItems:
-                        if currBase is not None:
-                            try:
-                                self[s] = CollElement(currBase, currLevel, 0)
-                            except KeyError:
-                                continue
+                        if len(s) == 0:
+                            continue
+                        if currBase is not None or s not in simplelist:
+                            before = 0
+                            if currBase is None and s not in simplelist:
+                                before = currLevel
+                                currBase = 'a'
+                                hasbefore = True
+                            if s != 'a' or not hasbefore:
+                                try:
+                                    self[s] = CollElement(currBase, currLevel, before)
+                                except KeyError:
+                                    continue
                         currLevel = 3
                         currBase = s
                         alphabet.append(s)
@@ -411,7 +420,11 @@ def main():
     import sys
     coll = Collation()
     if len(sys.argv) > 1:
-        coll.parse(sys.argv[1])
+        if sum(1 for c in sys.argv[1] if c in "/;") > 10:
+            rules = [r.strip() for r in sys.argv[1].split(";")]
+            coll.convertSimple(rules)
+        else:
+            coll.parse(sys.argv[1])
         coll.minimise()
         print(coll.asICU())
 
