@@ -209,6 +209,7 @@ class Collation(dict):
                 if expstr:
                     self[key].exp = expstr
                 base = key
+                before = 0
 
     def __setitem__(self, key, val):
         if key in self:
@@ -218,12 +219,13 @@ class Collation(dict):
     def _setSortKeys(self):
         '''Calculates tailored sort keys for everything in this collation'''
         if len(self) > 0 :
-            inc = 1. / pow(10, int(log10(len(self)))+1)
+            numbefores = sum((1 for c in self.values() if c.before > 0))
+            inc = 1. / pow(10, int(log10((numbefores + 1) * len(self)))+1)
             for v in sorted(self.values(), key=lambda x:x.order):
                 v.expand(self, self.ducet)
-                v.sortkey(self, self.ducet, inc)
+                v.sortkey(self, self.ducet, inc, (1./(numbefores+1)))
 
-    def asICU(self, alphabet, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
+    def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
         # needs fix to factor in characters coming before 'a' syntax, see llu.xml in sldr for an example of what that's supposed to look like. this needs to apply to all strengths of sorting
         """Returns ICU tailoring syntax of this Collation"""
         self._setSortKeys()
@@ -377,19 +379,19 @@ class CollElement(object):
         self.exp = self.base[l:]
         self.base = self.base[:l]
         
-    def sortkey(self, collations, ducetDict, inc):
+    def sortkey(self, collations, ducetDict, inc, beforeshift):
         if hasattr(self, 'key'):
             return self.key
         self.key = ducetSortKey(ducetDict, self.base)   # stop lookup loops
         b = collations.get(self.base, None)
         if b is not None and b.order <= self.order:
-            b.sortkey(collations, ducetDict, inc)
+            b.sortkey(collations, ducetDict, inc, beforeshift)
             basekey = b.shortkey.copy()
         else:
             basekey = self.key.copy()
         # Update the copied base SortKey to immediately follow the base
         if self.level < 4 :
-            basekey[self.level-1][-1] += inc if self.before == 0 else -inc 
+            basekey[self.level-1][-1] += inc if self.before != self.level + 1 else -beforeshift 
         if not self.exp and b is not None and b.exp:
             self.exp = b.exp
         if self.exp:
@@ -410,10 +412,8 @@ def main():
     coll = Collation()
     if len(sys.argv) > 1:
         coll.parse(sys.argv[1])
-        alphabet = "a b c d e f g h i j k l m n o p q r s t u v w x y z".split()
-        alphabet += coll.keys()
         coll.minimise()
-        print(coll.asICU(alphabet))
+        print(coll.asICU())
 
 if __name__ == '__main__':
     main()
