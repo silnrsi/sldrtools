@@ -216,14 +216,14 @@ class Collation(dict):
             raise KeyError("key {} already exists in collation with value {}".format(key, self[key]))
         dict.__setitem__(self, key, val)
 
-    def _setSortKeys(self):
+    def _setSortKeys(self, force=False):
         '''Calculates tailored sort keys for everything in this collation'''
         if len(self) > 0 :
             numbefores = sum((1 for c in self.values() if c.before > 0))
             inc = 1. / pow(10, int(log10((numbefores + 1) * len(self)))+1)
             for v in sorted(self.values(), key=lambda x:x.order):
                 v.expand(self, self.ducet)
-                v.sortkey(self, self.ducet, inc, (1./(numbefores+1)))
+                v.sortkey(self, self.ducet, inc, (1./(numbefores+1)), force=force)
 
     def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
         # needs fix to factor in characters coming before 'a' syntax, see llu.xml in sldr for an example of what that's supposed to look like. this needs to apply to all strengths of sorting
@@ -265,10 +265,10 @@ class Collation(dict):
             lastk = k
         return res[1:] if len(res) else ""
 
-    def minimise(self):
+    def minimise(self, alphabet=[]):
         self._setSortKeys()
         outlist = sorted(self.keys(), key=lambda k:self[k].key)
-        inlist = sorted(self.keys(), key=lambda k:ducetSortKey(self.ducet, k))
+        inlist = sorted(set(alphabet + list(self.keys())), key=lambda k:ducetSortKey(self.ducet, k))
         res = []
         for m in SequenceMatcher(a=inlist, b=outlist).get_opcodes():
             if m[0] in ("replace", "insert"):
@@ -298,7 +298,6 @@ class Collation(dict):
 
     def convertSimple(self, valueList):
         sortResult = []
-        alphabet = []
         simple = True
         simplelist = list("abcdefghijklmnopqrstuvwxyz'")
         hasbefore = False
@@ -332,22 +331,35 @@ class Collation(dict):
                     for s in slashItems:
                         if len(s) == 0:
                             continue
-                        if currBase is not None or s not in simplelist:
-                            before = 0
-                            if currBase is None and s not in simplelist:
-                                before = currLevel
-                                currBase = 'a'
-                                hasbefore = True
-                            if s != 'a' or not hasbefore:
-                                try:
-                                    self[s] = CollElement(currBase, currLevel, before)
-                                except KeyError:
-                                    continue
+                        if currBase is not None:
+                            try:
+                                self[s] = CollElement(currBase, currLevel, 0)
+                            except KeyError:
+                                continue
                         currLevel = 3
                         currBase = s
-                        alphabet.append(s)
                     currLevel = 2
+        self._findBefore()
         return alphabet if not simple else None
+
+    def _findBefore(self):
+        self._setSortKeys()
+        outlist = sorted(self.keys(), key=lambda k:self[k].key)
+        inlist = sorted(set(self.keys()), key=lambda k:ducetSortKey(self.ducet, k))
+        for m in SequenceMatcher(a=inlist, b=outlist).get_opcodes():
+            if m[0] in ("replace", "insert") and m[4] < len(outlist):
+                newbase = outlist[m[4]]
+                bcoll = self[outlist[m[3]]]
+                if bcoll.base in self:
+                    ocoll = self[bcoll.base]
+                    ocoll.before = 1
+                    ocoll.base = newbase
+                else:
+                    ocoll = CollElement(newbase, 1, 1)
+                    self[bcoll.base] = ocoll
+                del self[newbase]
+            break
+        self._setSortKeys(force=True)
 
 
 class CollElement(object):
@@ -382,13 +394,13 @@ class CollElement(object):
         self.exp = self.base[l:]
         self.base = self.base[:l]
         
-    def sortkey(self, collations, ducetDict, inc, beforeshift):
-        if hasattr(self, 'key'):
+    def sortkey(self, collations, ducetDict, inc, beforeshift, force=False):
+        if hasattr(self, 'key') and not force:
             return self.key
         self.key = ducetSortKey(ducetDict, self.base)   # stop lookup loops
         b = collations.get(self.base, None)
         if b is not None and b.order <= self.order:
-            b.sortkey(collations, ducetDict, inc, beforeshift)
+            b.sortkey(collations, ducetDict, inc, beforeshift, force=force)
             basekey = b.shortkey.copy()
         else:
             basekey = self.key.copy()
