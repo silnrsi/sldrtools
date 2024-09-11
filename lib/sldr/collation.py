@@ -265,23 +265,42 @@ class Collation(dict):
             lastk = k
         return res[1:] if len(res) else ""
 
-    def _minimise(self, alphabet=[]):
-        self._setSortKeys()
-        allkeys = set(list(self.keys()) + alphabet + [c.base for c in self.values() if c.base is not None])
-        outlist = sorted(allkeys, key=lambda k:self[k].key if k in self else ducetSortKey(self.ducet, k))
-        inlist = sorted(allkeys, key=lambda k:ducetSortKey(self.ducet, k))
-        res = []
-        for m in SequenceMatcher(a=inlist, b=outlist).get_opcodes():
-            if m[0] in ("replace", "insert"):
-                res.extend(outlist[m[3]:m[4]])
-        for k in list(self):
-            if k not in res:
-                del self[k]
-
     def minimise(self):
         self._setSortKeys()
+        allkeys = set(self.keys()) | set([v.base for v in self.values() if v.base is not None])
+        kducet = {k: ducetSortKey(self.ducet, k) for k in allkeys}
+        korder = sorted(kducet.keys(), key=lambda k:kducet[k])
+        for v in self.values():
+            v.inDucet = None
+
+        def parents(key, level):
+            curr = korder.index(key)
+            curr -= 1
+            if curr < 0:
+                return []
+            based = kducet[korder[curr]]
+            res = [korder[curr]]
+            while curr > 0:
+                curr -= 1
+                if kducet[korder[curr]][:level] != based[:level]:
+                    break
+                res.append(korder[curr])
+            return res
+
+        def isInDucet(ce, key):
+            if ce.inDucet is not None:
+                return ce.inDucet
+            if ce.base is None:
+                res = True
+            elif ce.base not in self or isInDucet(self[ce.base], ce.base):
+                res = ce.base in parents(key, ce.level) and not ce.before
+            else:
+                res = False
+            ce.inDucet = res
+            return res
+
         for k, v in list(self.items()):
-            if v.isInDucet(k, self):
+            if isInDucet(v, k):
                 del self[k]
 
     def getSortKey(self, s):
@@ -331,7 +350,6 @@ class Collation(dict):
                                 slashSet.add("".join(c.upper() if (i & (1 << j)) != 0 else c for j,c in enumerate(s)))
                             slashSet.remove(s)
                             slashItems.extend(slashSet)
-                    #slashItems.sort(key=ducet.keyfn(ducetDict, 3))
                     if simple:
                         if not len(simplelist) or slashItems[0] != simplelist.pop(0):
                             simple = False
@@ -347,7 +365,6 @@ class Collation(dict):
                         currBase = s
                     currLevel = 2
         self._findBefore()
-        return alphabet if not simple else None
 
     def _findBefore(self):
         self._setSortKeys()
@@ -427,19 +444,6 @@ class CollElement(object):
             self.shortkey = basekey
         self.key = basekey
         return basekey
-
-    def isInDucet(self, key, collation):
-        if self.inDucet is not None:
-            return self.inDucet
-        if self.base is None:
-            res = True
-        elif self.base not in collation or collation[self.base].isInDucet(self.base, collation):
-            dkey = ducetSortKey(collation.ducet, key)
-            res = self.key[:self.level] == dkey[:self.level] and not self.before
-        else:
-            res = False
-        self.inDucet = res
-        return res
 
 
 def main():
