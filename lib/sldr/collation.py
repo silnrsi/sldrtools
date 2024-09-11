@@ -292,13 +292,15 @@ class Collation(dict):
                 return ce.inDucet
             if ce.base is None:
                 res = True
-            elif ce.base not in self or isInDucet(self[ce.base], ce.base):
+            elif ce.base not in self or isInDucet(self[ce.base], ce.base) or ce.level == 1:
                 res = ce.base in parents(key, ce.level) and not ce.before
             else:
                 res = False
             ce.inDucet = res
             return res
 
+        for k, v in list(self.items()):
+            isInDucet(v, k)
         for k, v in list(self.items()):
             if isInDucet(v, k):
                 del self[k]
