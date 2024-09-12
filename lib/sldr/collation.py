@@ -339,10 +339,11 @@ class Collation(UserDict):
                 for spaceItem in spaceItems :
                     slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like x which should really be x/X and ngy/NGY -> ngy/Ngy/NGy/NGY
-                    if not strict and slashItems[0].lower() == slashItems[0] and (
-                            (len(slashItems[0]) > 1 and all((s.lower() == slashItems[0] for s in slashItems[1:]))) \
-                            or len(slashItems) == 1):
-                        s = slashItems[0]
+                    s = slashItems[0] if len(slashItems) else ""
+                    if not strict and (s.lower() == s and
+                                       len(s) > 1 and all((c.lower() == s for c in slashItems[1:]))) \
+                            or (len(s) > 1 and len(slashItems) == 1):
+                        slashItems[0] = slashItems[0].lower()
                         for i in range(1, len(s)+1):
                             n = s[:i].upper() + s[i:].lower()
                             if n not in slashItems:
