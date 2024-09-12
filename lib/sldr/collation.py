@@ -343,12 +343,7 @@ class Collation(UserDict):
                     if not strict and (s.lower() == s and
                                        len(s) > 1 and all((c.lower() == s for c in slashItems[1:]))) \
                             or (len(s) > 1 and len(slashItems) == 1):
-                        slashItems[0] = slashItems[0].lower()
-                        for i in range(1, len(s)+1):
-                            n = s[:i].upper() + s[i:].lower()
-                            if n not in slashItems:
-                                slashItems.append(n)
-                        slashItems = [s] + sorted(slashItems[1:], reverse=True) # get capitals first
+                        slashItems = sorted(set([s[:i].upper() + s[i:].lower() for i in range(len(s)+1)]), reverse=True)
                     for s in slashItems:
                         if len(s) == 0:
                             continue
