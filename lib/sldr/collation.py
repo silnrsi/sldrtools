@@ -5,6 +5,7 @@ import unicodedata as ud
 from math import log10
 from itertools import groupby, zip_longest
 from difflib import SequenceMatcher
+from collections import UserDict
 
 def escape(s, allchars=False):
     '''Turn normal Unicode into escaped tailoring syntax'''
@@ -160,11 +161,12 @@ class SortKey(list):
         return hash(tuple(tuple(x) for x in self))
 
 
-class Collation(dict):
+class Collation(UserDict):
     """ Dict keyed by sort element string with value a CollElement of the base 
         and corresponding level """
 
     def __init__(self, ducetDict=None):
+        super().__init__()
         if ducetDict is None:
             ducetDict = readDucet()
         self.ducet = ducetDict
@@ -212,7 +214,7 @@ class Collation(dict):
     def __setitem__(self, key, val):
         if key in self:
             raise KeyError("key {} already exists in collation with value {}".format(key, self[key]))
-        dict.__setitem__(self, key, val)
+        super().__setitem__(key, val)
 
     def _setSortKeys(self, force=False):
         '''Calculates tailored sort keys for everything in this collation'''
@@ -220,7 +222,7 @@ class Collation(dict):
             numbefores = sum((1 for c in self.values() if c.before > 0))
             inc = 1. / pow(10, int(log10((numbefores + 1) * len(self)))+1)
             for v in sorted(self.values(), key=lambda x:x.order):
-                # v.expand(self, self.ducet)
+                v.expand(self, self.ducet)
                 v.sortkey(self, self.ducet, inc, (1./(numbefores+1)), force=force)
 
     def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
