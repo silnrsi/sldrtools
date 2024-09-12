@@ -78,6 +78,12 @@ def cmpKey(a, b, level):
             return False
     return True 
 
+def lenKey(a, b, level):
+    for i in range(level):
+        if len(_stripzero(a[i])) != len(_stripzero(b[i])):
+            return False
+    return True
+
 __moduleDucet__ = None  # cache the default ducet
 def readDucet(path="") :
     if not path:
@@ -214,7 +220,7 @@ class Collation(dict):
             numbefores = sum((1 for c in self.values() if c.before > 0))
             inc = 1. / pow(10, int(log10((numbefores + 1) * len(self)))+1)
             for v in sorted(self.values(), key=lambda x:x.order):
-                v.expand(self, self.ducet)
+                # v.expand(self, self.ducet)
                 v.sortkey(self, self.ducet, inc, (1./(numbefores+1)), force=force)
 
     def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
@@ -273,12 +279,12 @@ class Collation(dict):
             if curr < 0:
                 return []
             based = kducet[korder[curr]]
-            if cmpKey(based, currd, level):
+            if cmpKey(based, currd, level) or not lenKey(based, currd, level):
                 return []
             res = [korder[curr]]
             while curr > 0:
                 curr -= 1
-                if kducet[korder[curr]][:level] != based[:level]:
+                if cmpKey(korder[curr], based, level):
                     break
                 res.append(korder[curr])
             return res
@@ -289,7 +295,7 @@ class Collation(dict):
             if ce.base is None:
                 res = True
             # a possible reset point
-            elif ce.base not in self or isInDucet(self[ce.base], ce.base):
+            elif ce.level == 1 or ce.base not in self or isInDucet(self[ce.base], ce.base):
                 res = ce.base in parents(key, ce.level) and not ce.before
             else:
                 res = False
