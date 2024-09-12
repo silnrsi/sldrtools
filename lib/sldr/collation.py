@@ -63,6 +63,21 @@ def ducetSortKey(d, k, extra=None):
         return SortKey([[v for v in r] for r in res])  # don't strip 0s if the only item in the string features a zero
     return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
+def stripzero(l):
+    res = l[:]
+    while len(l):
+        if res[-1] == 0:
+            res.pop()
+        else:
+            break
+    return res
+
+def cmpKey(a, b, level):
+    for i in range(level):
+        if stripzero(a[i]) != stripzero(b[i]):
+            return False
+    return True 
+
 def _filtersame(dat, level):
     '''A kind of groupby, return first of every sequence with the sortkey
         up to the given level'''
@@ -274,11 +289,15 @@ class Collation(dict):
             v.inDucet = None
 
         def parents(key, level):
+            # return all the keys that immediately precede key in the ducet at the given level
+            currd = kducet[key]
             curr = korder.index(key)
             curr -= 1
             if curr < 0:
                 return []
             based = kducet[korder[curr]]
+            if cmpKey(based, currd, level):
+                return []
             res = [korder[curr]]
             while curr > 0:
                 curr -= 1
@@ -292,15 +311,18 @@ class Collation(dict):
                 return ce.inDucet
             if ce.base is None:
                 res = True
-            elif ce.base not in self or isInDucet(self[ce.base], ce.base) or ce.level == 1:
+            # a possible reset point
+            elif ce.base not in self or isInDucet(self[ce.base], ce.base):
                 res = ce.base in parents(key, ce.level) and not ce.before
             else:
                 res = False
             ce.inDucet = res
             return res
 
+        # calculate all the ducet states first
         for k, v in list(self.items()):
             isInDucet(v, k)
+        # then delete them
         for k, v in list(self.items()):
             if isInDucet(v, k):
                 del self[k]
@@ -324,7 +346,7 @@ class Collation(dict):
             curr += c
         yield curr
 
-    def convertSimple(self, valueList):
+    def convertSimple(self, valueList, strict=False):
         sortResult = []
         simple = True
         simplelist = list("abcdefghijklmnopqrstuvwxyz'")
@@ -344,14 +366,15 @@ class Collation(dict):
                 for spaceItem in spaceItems :
                     slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like xX which should really be x/X
-                    if len(slashItems) == 1 and len(slashItems[0]) > 1 and len(slashItems[0]) < 10:
+                    if not strict and slashItems[0].lower() == slashItems[0] and (
+                            (len(slashItems[0]) > 1 and all((s.lower() == slashItems[0] for s in slashItems[1:]))) \
+                            or len(slashItems) == 1):
                         s = slashItems[0]
-                        slashSet = set()
-                        if sum(1 if c.lower() == c else 0 for c in s) == len(s):
-                            for i in range(2 ** len(s)):
-                                slashSet.add("".join(c.upper() if (i & (1 << j)) != 0 else c for j,c in enumerate(s)))
-                            slashSet.remove(s)
-                            slashItems.extend(slashSet)
+                        for i in range(1, len(s)+1):
+                            n = s[:i].upper() + s[i:].lower()
+                            if n not in slashItems:
+                                slashItems.append(n)
+                        slashItems = [s] + sorted(slashItems[1:], reverse=True)
                     if simple:
                         if not len(simplelist) or slashItems[0] != simplelist.pop(0):
                             simple = False
