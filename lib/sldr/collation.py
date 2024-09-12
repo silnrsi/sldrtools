@@ -63,7 +63,7 @@ def ducetSortKey(d, k, extra=None):
         return SortKey([[v for v in r] for r in res])  # don't strip 0s if the only item in the string features a zero
     return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
-def stripzero(l):
+def _stripzero(l):
     res = l[:]
     while len(l):
         if res[-1] == 0:
@@ -74,32 +74,9 @@ def stripzero(l):
 
 def cmpKey(a, b, level):
     for i in range(level):
-        if stripzero(a[i]) != stripzero(b[i]):
+        if _stripzero(a[i]) != _stripzero(b[i]):
             return False
     return True 
-
-def _filtersame(dat, level):
-    '''A kind of groupby, return first of every sequence with the sortkey
-        up to the given level'''
-    # anyopne want to refactor this to use groupby()?
-    res = []
-    acc = (0,)
-    level -= 1
-    for d in dat:
-        if d[1][level] != acc:
-            acc = d[1][level]
-            res.append(d)
-    return res
-
-def _makegroupdict(dat, keyfunc):
-    '''Create a dictionary for each sublist of dat keyed by first
-        in sublist. Used to collect subgroups with the same primary
-        key keyed by the first in the sublist.'''
-    res = {}
-    for k, t in groupby(dat, keyfunc):
-        d = list(t)
-        res[d[0][0]] = d
-    return res
 
 __moduleDucet__ = None  # cache the default ducet
 def readDucet(path="") :
@@ -328,14 +305,7 @@ class Collation(dict):
                 del self[k]
 
     def getSortKey(self, s):
-        keys = SortKey()
-        inc = 1. / pow(10, int(log10(len(self)+1)))
-        for c in self.itemise(s):
-            keys.append(ducetSortKey(self.ducet, c, extra=self))
-        for i in range(3):
-            if not len(keys[i]):
-                keys[i] = [100000]
-        return keys
+        return ducetSortKey(self.ducet, s)
 
     def itemise(self, s):
         curr = ""
@@ -348,9 +318,7 @@ class Collation(dict):
 
     def convertSimple(self, valueList, strict=False):
         sortResult = []
-        simple = True
         simplelist = list("abcdefghijklmnopqrstuvwxyz'")
-        hasbefore = False
         if len(valueList) > 0 :
             currBase = None
             for value in valueList :
@@ -359,13 +327,10 @@ class Collation(dict):
                     # Kludge: deal with a limitation of Paratext. Since these items are case equivalent, the user probably
                     # intended x/X rather than x X and was not permitted by Paratext.
                     spaceItems = ["{}/{}".format(*spaceItems)]
-                sortSpecItems = []
-                spaceSep = "&"
-                prevSlashItems = None
                 currLevel = 1
                 for spaceItem in spaceItems :
                     slashItems = [s.strip() for s in spaceItem.split('/')]
-                    # Kludge to handle something like xX which should really be x/X
+                    # Kludge to handle something like x which should really be x/X and ngy/NGY -> ngy/Ngy/NGy/NGY
                     if not strict and slashItems[0].lower() == slashItems[0] and (
                             (len(slashItems[0]) > 1 and all((s.lower() == slashItems[0] for s in slashItems[1:]))) \
                             or len(slashItems) == 1):
@@ -374,10 +339,7 @@ class Collation(dict):
                             n = s[:i].upper() + s[i:].lower()
                             if n not in slashItems:
                                 slashItems.append(n)
-                        slashItems = [s] + sorted(slashItems[1:], reverse=True)
-                    if simple:
-                        if not len(simplelist) or slashItems[0] != simplelist.pop(0):
-                            simple = False
+                        slashItems = [s] + sorted(slashItems[1:], reverse=True) # get capitals first
                     for s in slashItems:
                         if len(s) == 0:
                             continue
@@ -389,9 +351,9 @@ class Collation(dict):
                         currLevel = 3
                         currBase = s
                     currLevel = 2
-        self._findBefore()
+        self._insertBefore()
 
-    def _findBefore(self):
+    def _insertBefore(self):
         self._setSortKeys()
         outlist = sorted(self.keys(), key=lambda k:self[k].key)
         inlist = sorted(set(self.keys()), key=lambda k:ducetSortKey(self.ducet, k))
