@@ -477,7 +477,7 @@ class CollElement(object):
         self.base = self.base[:l]
         
     def sortkey(self, collations, ducetDict, inc, beforeshift, force=False):
-        if getattr(self, 'key', None) in None and not force:
+        if hasattr(self, 'key') and not force:
             return self.key
         self.key = ducetSortKey(ducetDict, self.base)   # stop lookup loops
         b = collations.get(self.base, None)
