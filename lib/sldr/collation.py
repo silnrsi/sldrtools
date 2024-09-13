@@ -268,6 +268,44 @@ class Collation(UserDict):
             lastk = k
         return res[1:] if len(res) else ""
 
+    def asSimple(self, ordering=lambda x:x[1].shortkey):
+        """ Creates simple collation specification """
+        def getparents(v):
+            lastb = v.base
+            base = self.get(v.base, None)
+            lastl = v.level
+            while base is not None and base.level == 3:
+                lastb = base.base
+                lastl = base.level
+                base = self.get(base.base, None)
+            if base is None or lastl == 1:
+                return (lastb, lastb)
+            second = lastb
+            while base is not None and base.level != 1:
+                lastb == base.base
+                base = self.get(base.base, None)
+            return (lastb, second)
+
+        tree = {}
+        lastk = None
+        for k, v in sorted(self.items(), key=ordering):
+            if v.level == 3:
+                top, second = getparents(v)
+                tree.setdefault(top, {}).setdefault(second, []).append(k)
+        lines = []
+        for k, v in tree.items():
+            s = [k]
+            if len(tree[k][k]):
+                s.append("/"+"/".join(tree[k][k]))
+            for a in tree[k].keys():
+                if a == k:
+                    continue
+                s.append(" "+a)
+                if len(tree[k][a]):
+                    s.append("/"+"/".join(tree[k][a]))
+            lines.append("".join(s))
+        return "\n".join(lines)
+
     def minimise(self):
         self._setSortKeys()
         allkeys = set(self.keys()) | set([v.base for v in self.values() if v.base is not None])
