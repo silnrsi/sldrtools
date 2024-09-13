@@ -446,14 +446,15 @@ class Collation(UserDict):
 class CollElement(object):
 
     def __init__(self, base, level, before):
-        self.base = base
-        self.level = level
-        self.before = before
-        self.exp = ""
-        self.prefix = ""
-        self.shortkey = ""
-        self.order = (0,)
-        self.inDucet = None
+        self.base = base            # parent element we are defined in relation to
+        self.level = level          # following (or before) parent at what level
+        self.before = before        # before level (should be the same a .level
+        self.exp = ""               # expansion. Everything after the / (e in a/e)
+        self.prefix = ""            # everything before the / in an expansion (a in a/e)
+        self.shortkey = ""          # The key before expansion added (used by children)
+        # self.key = None           # calculated sort key to interact with ducet (not the ducet key)
+        self.order = (0,)           # order in defn [reset index, element index within reset]
+        self.inDucet = None         # cache of whether we correspond to our position in the ducet
 
     def __repr__(self):
         res = ">>>>"[:self.level] + self.base
@@ -476,7 +477,7 @@ class CollElement(object):
         self.base = self.base[:l]
         
     def sortkey(self, collations, ducetDict, inc, beforeshift, force=False):
-        if hasattr(self, 'key') and not force:
+        if getattr(self, 'key', None) in None and not force:
             return self.key
         self.key = ducetSortKey(ducetDict, self.base)   # stop lookup loops
         b = collations.get(self.base, None)
