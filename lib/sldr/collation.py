@@ -86,6 +86,7 @@ def lenKey(a, b, level):
     return True
 
 __moduleDucet__ = None  # cache the default ducet
+
 def readDucet(path="") :
     if not path:
         global __moduleDucet__
@@ -170,6 +171,7 @@ class Collation(UserDict):
         if ducetDict is None:
             ducetDict = readDucet()
         self.ducet = ducetDict
+        self.issorted = False
 
     def parse(self, string):
         """Parse LDML/ICU sort tailoring"""
@@ -218,12 +220,13 @@ class Collation(UserDict):
 
     def _setSortKeys(self, force=False):
         '''Calculates tailored sort keys for everything in this collation'''
-        if len(self) > 0 :
+        if (not self.issorted or force) and len(self) > 0 :
             numbefores = sum((1 for c in self.values() if c.before > 0))
             inc = 1. / pow(10, int(log10((numbefores + 1) * len(self)))+1)
             for v in sorted(self.values(), key=lambda x:x.order):
                 v.expand(self, self.ducet)
                 v.sortkey(self, self.ducet, inc, (1./(numbefores+1)), force=force)
+            self.issorted = True
 
     def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
         # needs fix to factor in characters coming before 'a' syntax, see llu.xml in sldr for an example of what that's supposed to look like. this needs to apply to all strengths of sorting
@@ -273,11 +276,14 @@ class Collation(UserDict):
         for v in self.values():
             v.inDucet = None
 
-        def parents(key, level):
+        def parents(key, level, base=None):
             # return all the keys that immediately precede key in the ducet at the given level
             currd = kducet[key]
-            curr = korder.index(key)
-            curr -= 1
+            if base is None:
+                curr = korder.index(key)
+                curr -= 1
+            else:
+                curr = korder.index(base)
             if curr < 0:
                 return []
             based = kducet[korder[curr]]
@@ -294,11 +300,15 @@ class Collation(UserDict):
         def isInDucet(ce, key):
             if ce.inDucet is not None:
                 return ce.inDucet
-            if ce.base is None:
+            base = ce.base
+            if ce.level == 1:       # allow skips only at level 1
+                while base in self and not isInDucet(self[base], base):
+                    base = self[base].base
+            if base is None:
                 res = True
             # a possible reset point
-            elif ce.level == 1 or ce.base not in self or isInDucet(self[ce.base], ce.base):
-                res = ce.base in parents(key, ce.level) and not ce.before
+            elif base not in self or isInDucet(self[base], base):
+                res = base in parents(key, ce.level, base=base) and not ce.before
             else:
                 res = False
             ce.inDucet = res
@@ -331,7 +341,7 @@ class Collation(UserDict):
             currBase = None
             for value in valueList :
                 spaceItems = value.split(' ')
-                if len(spaceItems) == 2 and spaceItems[0].lower() == spaceItems[1].lower():
+                if not strict and len(spaceItems) == 2 and spaceItems[0].lower() == spaceItems[1].lower():
                     # Kludge: deal with a limitation of Paratext. Since these items are case equivalent, the user probably
                     # intended x/X rather than x X and was not permitted by Paratext.
                     spaceItems = ["{}/{}".format(*spaceItems)]
@@ -340,8 +350,8 @@ class Collation(UserDict):
                     slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like x which should really be x/X and ngy/NGY -> ngy/Ngy/NGy/NGY
                     s = slashItems[0] if len(slashItems) else ""
-                    if not strict and (s.lower() == s and
-                                       len(s) > 1 and all((c.lower() == s for c in slashItems[1:]))) \
+                    if not strict and \
+                            (s.lower() == s and len(s) > 1 and all((c.lower() == s for c in slashItems[1:]))) \
                             or (len(s) > 1 and len(slashItems) == 1):
                         slashItems = sorted(set([s[:i].upper() + s[i:].lower() for i in range(len(s)+1)]), reverse=True)
                     for s in slashItems:
@@ -360,7 +370,7 @@ class Collation(UserDict):
     def _insertBefore(self):
         self._setSortKeys()
         outlist = sorted(self.keys(), key=lambda k:self[k].key)
-        inlist = sorted(set(self.keys()), key=lambda k:ducetSortKey(self.ducet, k))
+        inlist = sorted(set((k for k in self.keys() if k in self.ducet)), key=lambda k:ducetSortKey(self.ducet, k))
         for m in SequenceMatcher(a=inlist, b=outlist).get_opcodes():
             if m[0] in ("replace", "insert") and m[4] < len(outlist):
                 newbase = outlist[m[4]]
