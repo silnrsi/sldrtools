@@ -3,23 +3,6 @@
 import unittest
 from sldr.collation import Collation, SortKey
 
-testsimples = {
-'short':   (r"b/B ; a/A ; á/Á ; c/C",
-            r"&[before 1]a < b <<< B &A < á <<< Á"),
-'beforea': (r"ꞌ/Ꞌ ; a/A ; b/B ; c/C ; d/D ; e/E ; f/F; g/G; NGY; h/H",
-            r"&[before 1]a < ꞌ <<< Ꞌ &G < ngy <<< Ngy <<< NGy <<< NGY"),
-'ngexpand':    (r"ꞌ/Ꞌ ; a/A ; b/B ; c/C ; d/D ; e/E ; f/F; g/G; NGY; h/H",
-                r"&[before 1]a < ꞌ <<< Ꞌ &G < ngy <<< Ngy <<< NGy <<< NGY"),
-'lots':    (r"a/A á/Á; b/B ꞌb; c/C; d/D ꞌd dr; e/E é/É; f/F; g/G gb gbr; i/I í/Í ị/Ị ị́ ɨ/Ɨ ɨ; k/K kp kpr; l/L; m/M mb; n/N nd ndr ng ṇg ṇ/Ṇ ngb ngbr nv ny nz; o/O ó/Ó; p/P ph; r/R ṛ/Ṛ; s/S; t/T tr; u/U ú/Ú ụ/Ụ ụ; v/V ṿ/Ṿ; w/W; y/Y ꞌy; z/Z",
-            r"&A << á <<< Á &B << ꞌb <<< Ꞌb <<< ꞋB &D << ꞌd <<< Ꞌd <<< ꞋD << dr <<< Dr <<< DR &E << é <<< É &G << gb <<< Gb <<< GB << gbr <<< Gbr <<< GBr <<< GBR &I << í <<< Í << ị <<< Ị << ị́ <<< Ị́ << ɨ <<< Ɨ &K << kp <<< Kp <<< KP << kpr <<< Kpr <<< KPr <<< KPR &M << mb <<< Mb <<< MB &N << nd <<< Nd <<< ND << ndr <<< Ndr <<< NDr <<< NDR << ng <<< Ng <<< NG << ṇg <<< Ṇg <<< ṆG << ṇ <<< Ṇ << ngb <<< Ngb <<< NGb <<< NGB << ngbr <<< Ngbr <<< NGbr <<< NGBr <<< NGBR << nv <<< Nv <<< NV << ny <<< Ny <<< NY << nz <<< Nz <<< NZ &O << ó <<< Ó &P << ph <<< Ph <<< PH &R << ṛ <<< Ṛ &T << tr <<< Tr <<< TR &U << ú <<< Ú << ụ <<< Ụ &V << ṿ <<< Ṿ &Y << ꞌy <<< Ꞌy <<< ꞋY")
-}
-
-testtailors = {
-'before':  (r"&[before 1]a < â < Å < b <<< B < b̃ <<< B̃ < |e <<< |E < c <<< C < d <<< D < e <<< E < È << ê <<< Ê << é <<< É << ë <<< Ë << ē <<< Ē << è < f <<< F < g <<< G < Gb < h <<< H < i <<< I < j <<< J < k <<< K < l <<< L < m <<< M < n <<< N < ½ < o <<< O < ô <<< Ô << ö <<< Ö < p <<< P < q <<< Q < r <<< R < s <<< S < t <<< T < u <<< U < ü <<< Ü < v <<< V < w <<< W < x <<< X < y <<< Y < × < z <<< Z < ɓ <<< Ɓ << Û < ɗ <<< Ɗ << ¬ < ɨ <<< Ɨ < ? < ' < m̃ <<< M̃",
-            r"&[before 1]a < â < Å &B < b̃ <<< B̃ < \|e <<< \|E &E < È << ê <<< Ê << é <<< É << ë <<< Ë << ē <<< Ē << è &G < Gb &N < ½ &O < ô <<< Ô << ö <<< Ö &U < ü <<< Ü &Ɓ << Û"),
-}
-
-
 class CollationTests(unittest.TestCase):
 
     def test_sortkeycmp(self):
@@ -49,19 +32,24 @@ class CollationTests(unittest.TestCase):
         self.assertEqual(res, outstr)
 
     def test_short(self):
-        self.runsimple(*testsimples['short'])
+        self.runsimple(r"b/B ; a/A ; á/Á ; c/C",
+            r"&[before 1]a < b <<< B &A < á <<< Á")
 
     def test_beforeaSimple(self):
-        self.runsimple(*testsimples['beforea'])
+        self.runsimple(r"ꞌ/Ꞌ ; a/A ; b/B ; c/C ; d/D ; e/E ; f/F; g/G; NGY; h/H",
+            r"&[before 1]a < ꞌ <<< Ꞌ &G < ngy <<< Ngy <<< NGy <<< NGY")
 
     def test_ngexpandSimple(self):
-        self.runsimple(*testsimples['ngexpand'])
+        self.runsimple(r"ꞌ/Ꞌ ; a/A ; b/B ; c/C ; d/D ; e/E ; f/F; g/G; NGY; h/H",
+                r"&[before 1]a < ꞌ <<< Ꞌ &G < ngy <<< Ngy <<< NGy <<< NGY")
 
     def test_lotsSimple(self):
-        self.runsimple(*testsimples['lots'])
+        self.runsimple(r"a/A á/Á; b/B ꞌb; c/C; d/D ꞌd dr; e/E é/É; f/F; g/G gb gbr; i/I í/Í ị/Ị ị́ ɨ/Ɨ ɨ; k/K kp kpr; l/L; m/M mb; n/N nd ndr ng ṇg ṇ/Ṇ ngb ngbr nv ny nz; o/O ó/Ó; p/P ph; r/R ṛ/Ṛ; s/S; t/T tr; u/U ú/Ú ụ/Ụ ụ; v/V ṿ/Ṿ; w/W; y/Y ꞌy; z/Z",
+            r"&A << á <<< Á &B << ꞌb <<< Ꞌb <<< ꞋB &D << ꞌd <<< Ꞌd <<< ꞋD << dr <<< Dr <<< DR &E << é <<< É &G << gb <<< Gb <<< GB << gbr <<< Gbr <<< GBr <<< GBR &I << í <<< Í << ị <<< Ị << ị́ <<< Ị́ << ɨ <<< Ɨ &K << kp <<< Kp <<< KP << kpr <<< Kpr <<< KPr <<< KPR &M << mb <<< Mb <<< MB &N << nd <<< Nd <<< ND << ndr <<< Ndr <<< NDr <<< NDR << ng <<< Ng <<< NG << ṇg <<< Ṇg <<< ṆG << ṇ <<< Ṇ << ngb <<< Ngb <<< NGb <<< NGB << ngbr <<< Ngbr <<< NGbr <<< NGBr <<< NGBR << nv <<< Nv <<< NV << ny <<< Ny <<< NY << nz <<< Nz <<< NZ &O << ó <<< Ó &P << ph <<< Ph <<< PH &R << ṛ <<< Ṛ &T << tr <<< Tr <<< TR &U << ú <<< Ú << ụ <<< Ụ &V << ṿ <<< Ṿ &Y << ꞌy <<< Ꞌy <<< ꞋY")
 
     def test_beforeTailor(self):
-        self.runtailor(*testtailors["before"])
+        self.runtailor(r"&[before 1]a < â < Å < b <<< B < b̃ <<< B̃ < |e <<< |E < c <<< C < d <<< D < e <<< E < È << ê <<< Ê << é <<< É << ë <<< Ë << ē <<< Ē << è < f <<< F < g <<< G < Gb < h <<< H < i <<< I < j <<< J < k <<< K < l <<< L < m <<< M < n <<< N < ½ < o <<< O < ô <<< Ô << ö <<< Ö < p <<< P < q <<< Q < r <<< R < s <<< S < t <<< T < u <<< U < ü <<< Ü < v <<< V < w <<< W < x <<< X < y <<< Y < × < z <<< Z < ɓ <<< Ɓ << Û < ɗ <<< Ɗ << ¬ < ɨ <<< Ɨ < ? < ' < m̃ <<< M̃",
+            r"&[before 1]a < â < Å &B < b̃ <<< B̃ < \|e <<< \|E &E < È << ê <<< Ê << é <<< É << ë <<< Ë << ē <<< Ē << è &G < Gb &N < ½ &O < ô <<< Ô << ö <<< Ö &U < ü <<< Ü &Ɓ << Û")
 
 if __name__ == "__main__":
     unittest.main()

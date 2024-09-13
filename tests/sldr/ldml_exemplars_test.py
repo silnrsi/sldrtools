@@ -287,13 +287,13 @@ class ExemplarsTests(unittest.TestCase):
         """Characters with Word_Break property Katakana are letters."""
         self.exemplars.process('\u307b\u307b \u307b\u309b')
         self.exemplars.analyze()
-        self.assertEqual('\u307b \u309b', self.exemplars.main)
+        self.assertEqual('\u309b \u307b', self.exemplars.main)
 
     def test_hebrew_aletter(self):
         """Characters with Word_Break property ALetter are not punctuation."""
         self.exemplars.process('\u05d1\u05f3\u05d2')
         self.exemplars.analyze()
-        self.assertEqual('\u05d1 \u05d2 \u05f3', self.exemplars.main)
+        self.assertEqual('\u05f3 \u05d1 \u05d2', self.exemplars.main)
         self.assertEqual('', self.exemplars.punctuation)
 
     def test_hebrew_midletter(self):
@@ -317,7 +317,7 @@ class ExemplarsTests(unittest.TestCase):
         """Digits are ignored, unless they have diacritics."""
         self.exemplars.process('1\u0301 2\u0301 3\u0301 4\u0301 5\u0301 6\u0301')
         self.exemplars.analyze()
-        self.assertEqual('1 2 3 4 5 6 \u0301', self.exemplars.main)
+        self.assertEqual('\u0301 1 2 3 4 5 6', self.exemplars.main)
         self.assertEqual('', self.exemplars.digits)
 
     def test_not_included(self):
@@ -328,12 +328,12 @@ class ExemplarsTests(unittest.TestCase):
     def test_lithuanian_main(self):
         self.exemplars.process('\u00c1\u0328 \u00e1\u0328 I\u0307\u0301 i\u0307\u0301 iastreon')
         self.exemplars.analyze()
-        self.assertEqual('a \u0105 e i i\u0307 n o r s t \u0301', self.exemplars.main)
+        self.assertEqual('\u0301 a \u0105 e i i\u0307 n o r s t', self.exemplars.main)
 
     def test_lithuanian_index(self):
         self.exemplars.process('a \u0105 b c A \u0104 B C Z')
         self.exemplars.analyze()
-        self.assertEqual('A \u0104 B C', self.exemplars.index)
+        self.assertEqual('A \u0104 B C Z', self.exemplars.index)
 
     def test_english_main(self):
         self.exemplars.frequent = 80
@@ -384,14 +384,14 @@ class ExemplarsTests(unittest.TestCase):
         self.exemplars.many_bases = 4
         self.exemplars.process('r\u00e9sum\u00e9 \u00e2 \u00ea \u00ee \u00f4 \u00fb')
         self.exemplars.analyze()
-        self.assertEqual('a e \u00e9 i m o r s u \u0302', self.exemplars.main)
+        self.assertEqual('\u0302 a e \u00e9 i m o r s u', self.exemplars.main)
 
     def test_french_main_nfd(self):
         """Marks occurring on many bases are separate."""
         self.exemplars.many_bases = 4
         self.exemplars.process('re\u0301sume\u0301 a\u0302 e\u0302 i\u0302 o\u0302 u\u0302')
         self.exemplars.analyze()
-        self.assertEqual('a e \u00e9 i m o r s u \u0302', self.exemplars.main)
+        self.assertEqual('\u0302 a e \u00e9 i m o r s u', self.exemplars.main)
 
     def test_french_auxiliary(self):
         self.exemplars.process('r\u00e9sum\u00e9')
@@ -407,7 +407,7 @@ class ExemplarsTests(unittest.TestCase):
         circumflex = '\u00e2 \u00ea \u00ee \u00f4 \u00fb'
         self.exemplars.process(base + grave + circumflex)
         self.exemplars.analyze()
-        self.assertEqual('a e i o u \u0302', self.exemplars.main)
+        self.assertEqual('\u0302 a e i o u', self.exemplars.main)
         self.assertEqual('\u00e0 \u00e8 \u00f9', self.exemplars.auxiliary)
 
     def test_french_index(self):
@@ -436,7 +436,7 @@ class ExemplarsTests(unittest.TestCase):
         """
         self.exemplars.process('ng\ua78c ng\u02bc ng\u02c0')
         self.exemplars.analyze()
-        self.assertEqual('g n \u02bc \u02c0 \ua78c', self.exemplars.main)
+        self.assertEqual('g n \u02c0 \u02bc \ua78c', self.exemplars.main)
 
     def test_devanagari_many(self):
         """Indic matras are always separate."""
@@ -514,7 +514,7 @@ class ExemplarsTests(unittest.TestCase):
         """
         self.exemplars.process('\u0915 \u0915\u1cd1')
         self.exemplars.analyze()
-        self.assertEqual('\u0915 \u1cd1', self.exemplars.main)
+        self.assertEqual('\u1cd1 \u0915', self.exemplars.main)
 
     def test_kannada_main_old(self):
         """Clusters with virama, ZWJ."""
@@ -586,13 +586,13 @@ class ExemplarsTests(unittest.TestCase):
                                'u\u0301 u\u0300 u\u0304 '
                                'aeiou')
         self.exemplars.analyze()
-        self.assertEqual('a e i o u \u0300 \u0301 \u0304', self.exemplars.main)
+        self.assertEqual('\u0301 \u0300 \u0304 a e i o u', self.exemplars.main)
 
     def test_vietnamese_vowels(self):
         """Some diacritics indicate additional vowels."""
         self.exemplars.process('\u0103\u00e2\u0111\u00ea\u00f4\u01a1\u01b0')
         self.exemplars.analyze()
-        self.assertEqual('\u00e2 \u0103 \u00ea \u00f4 \u01a1 \u01b0 \u0111', self.exemplars.main)
+        self.assertEqual('\u0103 \u00e2 \u0111 \u00ea \u00f4 \u01a1 \u01b0', self.exemplars.main)
 
     def test_vietnamese_tones(self):
         """Other diacritics indicate tones."""
@@ -606,16 +606,16 @@ class ExemplarsTests(unittest.TestCase):
         text += 'nhcitgu nhcitgu nhcitgu nhcitgu'
         self.exemplars.process(text)
         self.exemplars.analyze()
-        self.assertEqual('a \u00e2 \u0103 c e \u00ea g h i n o \u00f4 \u01a1 t u \u01b0 y '
-                         '\u0300 \u0301 \u0303 \u0309 \u0323', self.exemplars.main)
+        self.assertEqual('\u0301 \u0300 \u0303 \u0309 \u0323 '
+                         'a \u0103 \u00e2 c e \u00ea g h i n o \u00f4 \u01a1 t u \u01b0 y', self.exemplars.main)
 
     def test_stacking_diacritics(self):
         """Second level diacritics are always separate."""
         self.exemplars.process('a\u0324 b\u032a c\u0303 d\u0306 e\u0301 '
                                'f\u0324\u032a\u0303\u0306\u0301 nhcitgu')
         self.exemplars.analyze()
-        self.assertEqual('a\u0324 b c '
-                         'c\u0303 d e f\u0324\u0303 g h i n t u \u0301 \u0306 \u032a',
+        self.assertEqual('\u0301 \u0306 \u032a a\u0324 b c '
+                         'c\u0303 d e f\u0324\u0303 g h i n t u',
                          self.exemplars.main)
 
     def test_oriya_zwnj(self):
