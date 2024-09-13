@@ -352,9 +352,18 @@ class Collation(UserDict):
             ce.inDucet = res
             return res
 
+        def resetparent(v, k):
+            b = v.base
+            base = self.get(b, None)
+            while base is not None and base.level > v.level:
+                b = base.base
+                base = self.get(b, None)
+            v.base = b
+
         # calculate all the ducet states first
         for k, v in list(self.items()):
             isInDucet(v, k)
+            resetparent(v, k)
         # then delete them
         for k, v in list(self.items()):
             if isInDucet(v, k):
