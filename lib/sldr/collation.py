@@ -74,6 +74,8 @@ def _stripzero(l):
     return res
 
 def cmpKey(a, b, level):
+    if a is None or b is None or len(a) < level or len(b) < level:
+        return False
     for i in range(level):
         if _stripzero(a[i]) != _stripzero(b[i]):
             return False
@@ -228,6 +230,13 @@ class Collation(UserDict):
                 v.sortkey(self, self.ducet, inc, (1./(numbefores+1)), force=force)
             self.issorted = True
 
+    def cmpKeys(self, a, b, level):
+        av = self.get(a, None)
+        bv = self.get(b, None)
+        if av is None or bv is None:
+            return False
+        return cmpKey(av.key, bv.key, level)
+
     def asICU(self, wrap=0, withkeys=False, ordering=lambda x:x[1].shortkey): 
         # needs fix to factor in characters coming before 'a' syntax, see llu.xml in sldr for an example of what that's supposed to look like. this needs to apply to all strengths of sorting
         """Returns ICU tailoring syntax of this Collation"""
@@ -244,7 +253,7 @@ class Collation(UserDict):
                 res += v.prefix
             if k in skip:
                 continue
-            if v.base != lastk and v.base != eqchain or v.before != lastbefore:
+            if not self.cmpKeys(v.base, lastk, v.level) and v.base != eqchain or v.before != lastbefore:
                 loc = len(res) + 1
                 res += "\n&" + (f"[before {v.before}]" if v.before else "") + escape(v.base)
                 eqchain = None
