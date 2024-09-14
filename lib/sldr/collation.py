@@ -64,9 +64,9 @@ def ducetSortKey(d, k, extra=None):
         return SortKey([[v for v in r] for r in res])  # don't strip 0s if the only item in the string features a zero
     return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
-def _stripzero(l):
+def stripzero(l):
     res = l[:]
-    while len(l):
+    while len(res):
         if res[-1] == 0:
             res.pop()
         else:
@@ -77,13 +77,13 @@ def cmpKey(a, b, level):
     if a is None or b is None or len(a) < level or len(b) < level:
         return False
     for i in range(level):
-        if _stripzero(a[i]) != _stripzero(b[i]):
+        if stripzero(a[i]) != stripzero(b[i]):
             return False
     return True 
 
 def lenKey(a, b, level):
     for i in range(level):
-        if len(_stripzero(a[i])) != len(_stripzero(b[i])):
+        if len(stripzero(a[i])) != len(stripzero(b[i])):
             return False
     return True
 
@@ -279,18 +279,19 @@ class Collation(UserDict):
 
     def asSimple(self, ordering=lambda x:x[1].shortkey):
         """ Creates simple collation specification """
-        def getparents(v):
-            lastb = v.base
-            base = self.get(v.base, None)
-            lastl = v.level
+        def getparents(v, level):
+            lastb = v
+            base = self.get(v, None)
             while base is not None and base.level == 3:
                 lastb = base.base
-                lastl = base.level
+                level = base.level
                 base = self.get(base.base, None)
-            if base is None or lastl == 1:
+            if base is None or level == 1:
                 return (lastb, lastb)
             second = lastb
+            level = base.level
             while base is not None and base.level != 1:
+                level = base.level
                 lastb == base.base
                 base = self.get(base.base, None)
             return (lastb, second)
@@ -299,19 +300,32 @@ class Collation(UserDict):
         lastk = None
         for k, v in sorted(self.items(), key=ordering):
             if v.level == 3:
-                top, second = getparents(v)
+                top, second = getparents(v.base, 3)
                 tree.setdefault(top, {}).setdefault(second, []).append(k)
+            elif v.level == 2:
+                top, second = getparents(k, 2)
+                if not stripzero(ducetSortKey(self.ducet, k)[0]):
+                    top = ""
+                tree.setdefault(top, {}).setdefault(second, [])
+            elif v.level == 1:
+                tree.setdefault(k, {})
+            if v.base is not None and v.base not in self:
+                if not stripzero(ducetSortKey(self.ducet, v.base)[0]):
+                    tree.setdefault("", {}).setdefault(v.base, [])
+                else:
+                    tree.setdefault(v.base, {})
         lines = []
         for k, v in tree.items():
             s = [k]
-            if len(tree[k][k]):
-                s.append("/"+"/".join(tree[k][k]))
-            for a in tree[k].keys():
-                if a == k:
-                    continue
-                s.append(" "+a)
-                if len(tree[k][a]):
-                    s.append("/"+"/".join(tree[k][a]))
+            if len(tree[k]):
+                if k in tree[k] and len(tree[k][k]):
+                    s.append("/"+"/".join(tree[k][k]))
+                for a in tree[k].keys():
+                    if a == k:
+                        continue
+                    s.append(" "+a)
+                    if len(tree[k][a]):
+                        s.append("/"+"/".join(tree[k][a]))
             lines.append("".join(s))
         return "\n".join(lines)
 
@@ -339,7 +353,7 @@ class Collation(UserDict):
             res = [korder[curr]]
             while curr > 0:
                 curr -= 1
-                if cmpKey(korder[curr], based, level):
+                if not cmpKey(kducet[korder[curr]], based, level):
                     break
                 res.append(korder[curr])
             return res
@@ -348,7 +362,8 @@ class Collation(UserDict):
             if ce.inDucet is not None:
                 return ce.inDucet
             base = ce.base
-            if ce.level == 1:       # allow skips only at level 1
+            # allow strips for level 1 or level 2 for combining characters
+            if ce.level == 1 or (ce.level == 2 and not stripzero(kducet[key][0])):
                 while base in self and not isInDucet(self[base], base):
                     base = self[base].base
             if base is None:
@@ -401,7 +416,12 @@ class Collation(UserDict):
                     # Kludge: deal with a limitation of Paratext. Since these items are case equivalent, the user probably
                     # intended x/X rather than x X and was not permitted by Paratext.
                     spaceItems = ["{}/{}".format(*spaceItems)]
+                s = spaceItems[0] if len(spaceItems) else None
                 currLevel = 1
+                if s is not None and not stripzero(ducetSortKey(self.ducet, s)[0]):
+                    currLevel = 2
+                elif currBase is None or not stripzero(ducetSortKey(self.ducet, currBase)[0]):
+                    currBase = None
                 for spaceItem in spaceItems :
                     slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like x which should really be x/X and ngy/NGY -> ngy/Ngy/NGy/NGY
