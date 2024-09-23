@@ -370,7 +370,7 @@ class Collation(UserDict):
                 res = True
             # a possible reset point
             elif base not in self or isInDucet(self[base], base):
-                res = base in parents(key, ce.level, base=base if base not in self else None) and not ce.before
+                res = base in parents(key, ce.level, base=None) and not ce.before
             else:
                 res = False
             ce.inDucet = res
