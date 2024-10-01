@@ -40,24 +40,32 @@ def unescape(s):
     s = s.replace("''", "'")
     return s
 
-def ducetSortKey(d, k, extra=None):
+def ducetSortKey(d, k, extra=None, fn=None):
     '''Turn a sequence of sort keys for the given string into a single
-        sort key.'''
+        SortKey (array of 3 arrays)'''
+    dlambda = lambda k: list(zip(*d.get(k, [])))
+    if fn is None:
+        fn = dlambda
     res = [[], [], []]
     i = len(k)
     singlechar = False
     if len(k) == 1:
-        singlechar = True  
+        singlechar = True
     while i > 0:
-        try:
-            if extra and k[:i] in extra:
-                key = extra[k[:i]].key
-            else:
-                key = list(zip(*d[k[:i]]))
-        except KeyError:
+        if extra and k[:i] in extra:
+            key = extra[k[:i]].key
+        else:
+            key = fn(k[:i])
+        if key is None or not len(key):
+            if k[:i] in d:
+                key = dlambda(k[:i])
+        if key is None or not len(key):
             i -= 1
             continue
-        res = [res[j] + list(key[j]) for j in range(3)]
+        try:
+            res = [res[j]+list(key[j]) for j in range(3)]
+        except IndexError:
+            breakpoint()
         k = k[i:]
         i = len(k)
     if singlechar:
@@ -65,7 +73,9 @@ def ducetSortKey(d, k, extra=None):
     return SortKey([[v for v in r if v != 0] for r in res])  # strip 0s
 
 def stripzero(l):
-    res = l[:]
+    if l is None:
+        return [[], [], []]
+    res = list(l)[:]
     while len(res):
         if res[-1] == 0:
             res.pop()
@@ -80,6 +90,18 @@ def cmpKey(a, b, level):
         if stripzero(a[i]) != stripzero(b[i]):
             return False
     return True 
+
+def diffLevel(a, b):
+    if a is None or b is None:
+        return 0
+    for i in range(3):
+        x = stripzero(a[i])
+        y = stripzero(b[i])
+        if x < y:
+            return (i + 1)
+        elif x > y:
+            return -(i + 1)
+    return 4
 
 def lenKey(a, b, level):
     for i in range(level):
@@ -121,14 +143,20 @@ def readDucet(path="") :
 
 class SortKey(list):
     """ List of subkeys for each level. Each subkey is a list of values """
+    def add(self, other):
+        if other is None:
+            return self[:]
+        return [a[0]+a[1] for a in zip_longest(self, other)]
+
     def append(self, other):
-        self[:] = self + other
+        self[:] = self.add(other)
 
     def __add__(self, other):
-        return [sum(z, []) for z in zip_longest(self, other, fillvalue=[])]
+        return self.add(other)
 
     def cmp(self, other):
         ''' Returns the level of the difference and negative if self < other '''
+        return diffLevel(other, self)
         for i, z in enumerate(zip_longest(self, other)):
             if z[0] < z[1]:
                 return -(i+1)
@@ -292,7 +320,7 @@ class Collation(UserDict):
             level = base.level
             while base is not None and base.level != 1:
                 level = base.level
-                lastb == base.base
+                lastb = base.base
                 base = self.get(base.base, None)
             return (lastb, second)
 
@@ -329,9 +357,76 @@ class Collation(UserDict):
             lines.append("".join(s))
         return "\n".join(lines)
 
-    def minimise(self):
+    def getnext(self, k, charlist, direction=1):
+        if k not in self:
+            bk = ducetSortKey(self.ducet, k)
+        else:
+            bk = self[k].key
+        if k not in charlist:
+            for i, c in enumerate(charlist):
+                if bk <= ducetSortKey(self.ducet, c):
+                    break
+        else:
+            i = charlist.index(k)
+        while (i > 0) if direction < 0 else (i < len(charlist) - 1):
+            n = charlist[i + direction]
+            if len(n) == 1:
+                nb = self.get(n, None)
+                if nb is not None and diffLevel(nb.key, bk) == -direction:
+                    return n
+            i += direction
+        return None
+
+    def sortKey(self, k):
+        return ducetSortKey(self.ducet, k, fn=lambda k:self[k].key if k in self else None)
+
+    def minimise(self, alphabet=[]):
+        self._setSortKeys()
+        alphabet = alphabet[:]
+        chains = {}
+        res = []
+        allkeys = set()
+        allsorts = sorted(self.keys(), key=lambda s:self[s].key)
+        for k, v in self.items():
+            if v.before or len(k) > 1:
+                res.append((k, v))
+            else:
+                chains.setdefault(v.head(k, self), []).append((k, v))
+        for k, v in chains.items():
+            v.append((k, None))
+        ksorts = set(sum(chains.values(), []))
+        torder = [y[0] for y in sorted(ksorts, key=lambda x:ducetSortKey(self.ducet, x[0]))]
+        korder = sorted(ksorts, key=lambda x:self.sortKey(x[0]))
+        dorder = sorted(ksorts, key=lambda x:ducetSortKey(self.ducet, x[0]))
+        klist = [a + (">>>>"[:x.level] if x is not None else ">") for a, x in korder]
+        dlast = ducetSortKey(self.ducet, dorder[0][0])
+        dlist = [dorder[0][0]+">"]
+        for d in dorder[1:]:
+            dn = ducetSortKey(self.ducet, d[0])
+            dl = diffLevel(dlast, dn)
+            dlist.append(d[0] + (">>>>"[:dl]))
+            dlast = dn
+        # dlist = [a + (">>>>"[:x.level] if x is not None else ">") for a, x in dorder]
+        ops = SequenceMatcher(a=dlist, b=klist).get_opcodes()
+        for op in ops:
+            if op[0] in ('insert', 'replace'):
+                res.extend(korder[op[3]:op[4]])
+            #elif op[0] == "delete" and op[4] < len(korder) - 1:
+            #    res.append(korder[op[4]])
+        keeps = set()
+        for a, x in res:
+            if x is not None:
+                keeps.update(x.all_children(a, x.level, self))
+            else:
+                keeps.add(a)
+        for k in list(self.keys()):
+            if k not in keeps:
+                del self[k]
+
+    def minimise_old(self):
         self._setSortKeys()
         allkeys = set(self.keys()) | set([v.base for v in self.values() if v.base is not None])
+        order = sorted(self.keys(), key=lambda k:self[k].key)
         kducet = {k: ducetSortKey(self.ducet, k) for k in allkeys}
         korder = sorted(kducet.keys(), key=lambda k:kducet[k])
         for v in self.values():
@@ -475,14 +570,35 @@ class CollElement(object):
         # self.key = None           # calculated sort key to interact with ducet (not the ducet key)
         self.order = (0,)           # order in defn [reset index, element index within reset]
         self.inDucet = None         # cache of whether we correspond to our position in the ducet
+        self._head = None           # the top of our chain, that itself is not in the collation
+        self.children = [[], [], []]    # children at each level
 
     def __repr__(self):
         res = ">>>>"[:self.level] + self.base
         res += f"[before {self.before}]" if self.before else ""
         if self.exp:
-            return repr(res + "/" + self.exp)
+            return res + "/" + self.exp
         else:
-            return repr(res)
+            return res
+
+    def head(self, k, coll):
+        if self._head is not None:
+            return self._head
+        if self.base in coll:
+            self._head = coll[self.base].head(self.base, coll)
+            coll[self.base].children[self.level-1].append(k)
+        #elif self.before:
+        #    self._head = f"[before {self.before}]{self.base}"
+        else:
+            self._head = self.base
+        return self._head
+
+    def all_children(self, k, level, coll):
+        res = []
+        for i in range(2 if level == 1 else level, 4):
+            res.extend(sum([coll[x].all_children(x, level, coll) for x in getattr(self, 'children', [] * 3)[i-1]], []))
+        res.append(k)
+        return res
 
     def expand(self, collations, ducetDict):
         if self.exp:
@@ -497,6 +613,7 @@ class CollElement(object):
         self.base = self.base[:l]
         
     def sortkey(self, collations, ducetDict, inc, beforeshift, force=False):
+        """ Calculate a SortKey """
         if hasattr(self, 'key') and not force:
             return self.key
         self.key = ducetSortKey(ducetDict, self.base)   # stop lookup loops
@@ -514,7 +631,7 @@ class CollElement(object):
         if self.exp:
             expkey = ducetSortKey(ducetDict, self.exp, extra=collations)
             if expkey > basekey:
-                self.shortkey = expkey.copy() + SortKey([[1]])
+                self.shortkey = expkey.copy() + SortKey([[1], [0], [0]])
             else:
                 self.shortkey = basekey.copy()
             basekey.append(expkey)
