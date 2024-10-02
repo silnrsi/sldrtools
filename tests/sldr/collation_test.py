@@ -78,19 +78,20 @@ class CollationTests(unittest.TestCase):
             r"&Ɨ << ɨ́ <<< Ɨ́ < p <<< P < k <<< K")
         
     def test_latnsimple2(self):
-        self.runsimple("a/A; á/Á; à/À; â/Â; ä/Ä; Ā; ā̀/Ā̀; b/B; c/C; d/D; e/E; é/É; è/È; ê/Ê; ë/Ë; ē/Ē; ḗ; ḕ/Ḕ; f/F; g/G; g̱/G̱; ǥ/Ǥ; h/H; i/I; í/Í; ì/Ì; î/Î; ï/Ï; ī/Ī; ī̀/Ī̀; ɨ; j/J; k/K; ˈ; l/L; ḻ/Ḻ; m/M; n/N; ñ/Ñ; ng Ng; o/O; ó/Ó; ò/Ò; ô/Ô; ö/Ö; ō/Ō; ṑ/Ṑ; õ/Õ; p/P; ₱; q/Q; r/R; ṟ/Ṟ; s/S; t/T; u/U; ú/Ú; ù/Ù; û/Û; ü/Ü; ū/Ū; ū̀/Ū̀; v/V; w/W; w̱/W̱; x/X; y/Y; ɏ/Ɏ; z/Z, \'",
-            "&A < á <<< Á < à <<< À < â <<< Â < ä <<< Ä < ā <<< Ā < ā̀ <<< Ā̀ &E < é <<< É < è <<< È < ê <<< Ê < ë <<< Ë < ē <<< Ē < ḗ <<< Ẽ́ < ḕ <<< Ḕ &G < g̱ <<< G̱ &I < í <<< Í < ì <<< Ì < î <<< Î < ï <<< Ï < ī <<< Ī < ī̀ <<< Ī̀ &K < ˈ &L < ḻ <<< Ḻ &N < ñ <<< Ñ < ng <<< Ng <<< NG &O < ó <<< Ó < ò <<< Ò < ô <<< Ô < ö <<< Ö < ō <<< Ō < ṑ <<< Ṑ < õ <<< Õ &P < ₱ &R < ṟ <<< Ṟ &U < ú <<< Ú < ù <<< Ù < û <<< Û < ü <<< Ü < ū <<< Ū < ū̀ <<< Ū̀ &W < w̱ <<< W̱ &Z < ''")
-            # lonely stacked diacritic not given its capital counterpart (ẽ́)
-            # lonely capitalized diacritic not given its lowercase counterpart (Ã)
-            # incorrectly escaped apostrophe in simple sort should have its escaping corrected (backslash removed, extra apostrophe added). Currently the process adds an extra backslash and an extra apostrophe, resulting in &Z < \\''
-        
+        self.runsimple("e/E; ḗ; ḕ/Ḕ",
+            "&E < ḗ <<< Ẽ́ < ḕ <<< Ḕ")
+
     def test_latnsimple3(self):
-        self.runsimple("a/A à À á Á â Â ǎ Ǎ a̧ A̧ ã Ã ā Ā ä Ä a̍ A̍ a̰ A̰; æ/Æ æ̀ Æ̀ æ̂ Æ̂; α/Ɑ; b/B; bh Bh; ɓ/Ɓ; c/C; ch Ch; d/D; ɗ/Ɗ; e/E è È é É ê Ê ě Ě ȩ Ȩ ẽ Ẽ ē Ē ë Ë e̍ E̍ ḛ Ḛ; ɛ/Ɛ ɛ̀ Ɛ̀ ɛ́ Ɛ́ ɛ̂ Ɛ̂ ɛ̌ Ɛ̌ ɛ̧ Ɛ̧ ɛ̃ Ɛ̃ ɛ̄ Ɛ̄ ɛ̈ Ɛ̈ ɛ̍ Ɛ̍ ɛ̰ Ɛ̰; f/F; g/G; gb Gb; gh Gh; h/H; i/I ì Ì í Í î Î ǐ Ǐ i̧ I̧ ĩ Ĩ ī Ī ï Ï i̍ I̍ ḭ Ḭ; ə/Ə ə̀ Ə̀ ə́ Ə́ ə̂ Ə̂ ə̌ Ə̌ ə̧ Ə̧ ə̃ Ə̃ ə̄ Ə̄ ə̈ Ə̈ ə̍ Ə̍ ə̰ Ə̰; ɨ/Ɨ ɨ̀ Ɨ̀ ɨ́ Ɨ́ ɨ̂ Ɨ̂ ɨ̌ Ɨ̌ ɨ̧ Ɨ̧ ɨ̃ Ɨ̃ ɨ̄ Ɨ̄ ɨ̈ Ɨ̈ ɨ̍ Ɨ̍ ɨ̰ Ɨ̰; j/J; '; k/K; kp Kp; l/L; m/M; n/N; ŋ/Ŋ; ny Ny; o/O ò Ò ó Ó ô Ô ǒ Ǒ o̧ O̧ õ Õ ō Ō ö Ö o̍ O̍ o̰ O̰; ɔ/Ɔ ɔ̀ Ɔ̀ ɔ́ Ɔ́ ɔ̂ Ɔ̂ ɔ̌ Ɔ̌ ɔ̧ Ɔ̧ ɔ̃ Ɔ̃ ɔ̄ Ɔ̄ ɔ̈ Ɔ̈ ɔ̍ Ɔ̍ ɔ̰ Ɔ̰; œ/Œ œ̀ Œ̀ œ́ Œ́ œ̂ Œ̂ œ̌ Œ̌ œ̧ Œ̧ œ̃ Œ̃ œ̄ Œ̄ œ̍ Œ̍ œ̰ Œ̰; ø/Ø; p/P; q/Q; r/R; s/S; sh Sh; t/T; u/U ù Ù ú Ú û Û ǔ Ǔ u̧ U̧ ũ Ũ ū Ū ü Ü u̍ U̍ ṵ Ṵ; ue UE ùe ÙE ûe ÛE ǔe ǓE; ʉ/Ʉ ʉ̀ Ʉ̀ ʉ́ Ʉ́ ʉ̂ Ʉ̂ ʉ̌ Ʉ̌ ʉ̧ Ʉ̧ ʉ̃ Ʉ̃ ʉ̄ Ʉ̄ ʉ̈ Ʉ̈ ʉ̍ Ʉ̍ ʉ̰ Ʉ̰ Ʉ̀ Ʉ́ Ʉ̌; v/V; w/W; ẅ; x/X; y/Y ỳ Ỳ ý Ý ŷ Ŷ y̌ Y̌ y̧ Y̧ ỹ Ỹ ȳ Ȳ y̍ Y̍ y̰ Y̰; ƴ/Ƴ; z/Z",
-            "&A << à <<< À << á <<< Á << â <<< Â << ǎ <<< Ǎ << a̧ <<< A̧ << ã <<< Ã << ā <<< Ā << ä <<< Ä << a̍ <<< A̍ << a̰ <<< A̰ &Æ << æ̀ <<< Æ̀ << æ̂ <<< Æ̂ < ɑ <<< Ɑ &B < bh <<< Bh <<< BH &C < ch <<< Ch <<< CH &E << è <<< È << é <<< É << ê <<< Ê << ě <<< Ě << ȩ <<< Ȩ << ẽ <<< Ẽ << ē <<< Ē << ë <<< Ë << e̍ <<< E̍ << ḛ <<< Ḛ &Ɛ << ɛ̀ <<< Ɛ̀ << ɛ́ <<< Ɛ́ << ɛ̂ <<< Ɛ̂ << ɛ̌ <<< Ɛ̌ << ɛ̧ <<< Ɛ̧ << ɛ̃ <<< Ɛ̃ << ɛ̄ <<< Ɛ̄ << ɛ̈ <<< Ɛ̈ << ɛ̍ <<< Ɛ̍ << ɛ̰ <<< Ɛ̰ &G < gb <<< Gb <<< GB < gh <<< Gh <<< GH &I << ì <<< Ì << í <<< Í << î <<< Î << ǐ <<< Ǐ << i̧ <<< I̧ << ĩ <<< Ĩ << ī <<< Ī << ï <<< Ï << i̍ <<< I̍ << ḭ <<< Ḭ < ə <<< Ə << ə̀ <<< Ə̀ << ə́ <<< Ə́ << ə̂ <<< Ə̂ << ə̌ <<< Ə̌ << ə̧ <<< Ə̧ << ə̃ <<< Ə̃ << ə̄ <<< Ə̄ << ə̈ <<< Ə̈ << ə̍ <<< Ə̍ << ə̰ <<< Ə̰ &Ɨ << ɨ̀ <<< Ɨ̀ << ɨ́ <<< Ɨ́ << ɨ̂ <<< Ɨ̂ << ɨ̌ <<< Ɨ̌ << ɨ̧ <<< Ɨ̧ << ɨ̃ <<< Ɨ̃ << ɨ̄ <<< Ɨ̄ << ɨ̈ <<< Ɨ̈ << ɨ̍ <<< Ɨ̍ << ɨ̰ <<< Ɨ̰ &J < '' &K < kp <<< Kp <<< KP &Ŋ < ny <<< Ny <<< NY &O << ò <<< Ò << ó <<< Ó << ô <<< Ô << ǒ <<< Ǒ << o̧ <<< O̧ << õ <<< Õ << ō <<< Ō << ö <<< Ö << o̍ <<< O̍ << o̰ <<< O̰ < ɔ <<< Ɔ << ɔ̀ <<< Ɔ̀ << ɔ́ <<< Ɔ́ << ɔ̂ <<< Ɔ̂ << ɔ̌ <<< Ɔ̌ << ɔ̧ <<< Ɔ̧ << ɔ̃ <<< Ɔ̃ << ɔ̄ <<< Ɔ̄ << ɔ̈ <<< Ɔ̈ << ɔ̍ <<< Ɔ̍ << ɔ̰ <<< Ɔ̰ &Œ << œ̀ <<< Œ̀ << œ́ <<< Œ́ << œ̂ <<< Œ̂ << œ̌ <<< Œ̌ << œ̧ <<< Œ̧ << œ̃ <<< Œ̃ << œ̄ <<< Œ̄ << œ̍ <<< Œ̍ << œ̰ <<< Œ̰ < ø <<< Ø &S < sh <<< Sh <<< SH &U << ù << Ù << ú << Ú << û << Û << ǔ << Ǔ << u̧ <<< U̧ << ũ << Ũ << ū << Ū << ü << Ü << u̍ <<< U̍ << ṵ << Ṵ < ue <<< Ue <<< UE << ùe <<< Ùe <<< ÙE << ûe <<< Ûe <<< ÛE << ǔe <<< Ǔe <<< ǓE &Ʉ << ʉ̀ <<< Ʉ̀ << ʉ́ <<< Ʉ́ << ʉ̂ <<< Ʉ̂ << ʉ̌ <<< Ʉ̌ << ʉ̧ <<< Ʉ̧ << ʉ̃ <<< Ʉ̃ << ʉ̄ <<< Ʉ̄ << ʉ̈ <<< Ʉ̈ << ʉ̍ <<< Ʉ̍ << ʉ̰ <<< Ʉ̰ &W < ẅ < Ẅ &Y << ỳ <<< Ỳ << ý <<< Ý << ŷ <<< Ŷ << y̌ <<< Y̌ << y̧ <<< Y̧ << ỹ <<< Ỹ << ȳ <<< Ȳ << y̍ <<< Y̍ << y̰ <<< Y̰")
-            # if greek alpha appears in collation with latn characters swap for latin alpha
-            # spaced-out secondary sorted capital pairs that aren't made of two or more codepoints (i.e. "á Á") need to have correct triple arrow 
-            # digraphs bh and gb were removed during minimizing
-            # ẅ by itself, was not given the appropriate capitalized counterpart
+        self.runsimple("z/Z, \'",
+            "&Z < ''")
+    
+    def test_latnsimple4(self):
+        self.runsimple("w/W; ẅ",
+            "&W < ẅ <<< Ẅ")
+        
+    def test_latnsimple5(self):
+        self.runsimple("a/A à À á Á â Â ǎ Ǎ a̧ A̧ ã Ã ā Ā ä Ä a̍ A̍ a̰ A̰; æ/Æ æ̀ Æ̀ æ̂ Æ̂",
+            "&A << à <<< À << á <<< Á << â <<< Â << ǎ <<< Ǎ << a̧ <<< A̧ << ã <<< Ã << ā <<< Ā << ä <<< Ä << a̍ <<< A̍ << a̰ <<< A̰ &Æ << æ̀ <<< Æ̀ << æ̂ <<< Æ̂")
 
 if __name__ == "__main__":
     unittest.main()
