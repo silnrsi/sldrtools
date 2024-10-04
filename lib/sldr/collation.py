@@ -395,6 +395,8 @@ class Collation(UserDict):
         for k, v in chains.items():
             v.append((k, None))
         ksorts = set(sum(chains.values(), []))
+        if not len(ksorts):
+            return
         torder = [y[0] for y in sorted(ksorts, key=lambda x:ducetSortKey(self.ducet, x[0]))]
         korder = sorted(ksorts, key=lambda x:self.sortKey(x[0]))
         dorder = sorted(ksorts, key=lambda x:ducetSortKey(self.ducet, x[0]))
@@ -521,10 +523,12 @@ class Collation(UserDict):
                     slashItems = [s.strip() for s in spaceItem.split('/')]
                     # Kludge to handle something like x which should really be x/X and ngy/NGY -> ngy/Ngy/NGy/NGY
                     s = slashItems[0] if len(slashItems) else ""
-                    if not strict and \
-                            (s.lower() == s and len(s) > 1 and all((c.lower() == s for c in slashItems[1:]))) \
+                    if not strict and s.upper() != s.lower() and \
+                            (s.lower() == s and len(s) > 1 and all((c.lower() == s.lower() for c in slashItems[1:]))) \
                             or (len(s) > 1 and len(slashItems) == 1):
                         slashItems = sorted(set([s[:i].upper() + s[i:].lower() for i in range(len(s)+1)]), reverse=True)
+                    if len(slashItems) == 1 and len(s) == 1 and s.upper() != s.lower():
+                        slashItems.append(s.upper() if s == s.lower() else s.lower())
                     for s in slashItems:
                         if len(s) == 0:
                             continue
