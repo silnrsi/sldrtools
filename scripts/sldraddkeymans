@@ -4,20 +4,25 @@ import argparse, os
 import json, csv
 from sldr.ldml import Ldml
 from langtag import lookup
+import requests
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-i","--indir",action="append",help="Revlative path to json file downloaded from https://api.keyman.com/cloud/4.0/keyboards/?languageidtype=bcp47")
+parser.add_argument("-f", "--fpath",help="Relative path to json file downloaded from https://api.keyman.com/cloud/4.0/keyboards/?languageidtype=bcp47. Otherwise, the API will be accessed via url")
 parser.add_argument("-o","--output",help="Generate report here")
 parser.add_argument("-q","--quiet",action="store_true",help="Reduced screen output")
 parser.add_argument("-s","--sldr",help="root of SLDR tree to write into")
 parser.add_argument("-n","--dryrun",action="store_true",help="Don't write to any sldr files")
 args = parser.parse_args()
 
-#relative path for emily's storage system is "../../../SourceFiles/keyman2025/keyboards.json"
-
-dirname = os.path.dirname(__file__)
-keymanpath = os.path.realpath(os.path.join(dirname, args.indir))        #could i get this to work WITHOUT downloading it but instead accessing the api directly? i mean duh but figureing out how yay
-alldat = json.load(open(keymanpath))
+if args.fpath:
+    #relative path for emily's storage system is "../../../SourceFiles/keyman2025/keyboards.json"
+    dirname = os.path.dirname(__file__)
+    keymanpath = os.path.realpath(os.path.join(dirname, args.fpath))
+    alldat = json.load(open(keymanpath))
+else:
+    apiurl = "https://api.keyman.com/cloud/4.0/keyboards/?languageidtype=bcp47"
+    response = requests.get(apiurl)
+    alldat = json.loads(response.content)
 dat = ""
 id = ""
 results = {}
@@ -44,7 +49,8 @@ if args.output:
 
 badtags = {
     # langtags found in the data that are, for some reason, not going to work right without being tweaked slightly
-    "dgo-arab-pk":"dgo-arab",
+    # alt method would be to do it based on keyboard?
+    # there are others, but these are the ones with easy fixes for now. 
     "yor":"yo",
     "kau":"kr",
     "ibo":"ig",
@@ -55,13 +61,11 @@ if args.sldr:
     for lang, info in sorted(results.items()):
         try:
             lt = lookup(lang)
-            print(lang + " " + str(lt))
         except KeyError:
             if lang in badtags.keys():
                 retrytag = badtags[lang]
                 try: 
                     lt = lookup(retrytag)
-                    print(retrytag + " " + str(lt))
                 except KeyError:
                     print("Can't find {} with {}".format(lang, info[0]['id']))
                     continue
