@@ -40,7 +40,7 @@ for a in alldat["keyboard"]:
                 entry[s+'source'] = k[s]['source'][0]
 if args.output:
     with open(args.output, "w") as outf:
-        fieldnames = ['langtag', 'fontfamily', 'fontsource',
+        fieldnames = ['langtag', 'id', 'fontfamily', 'fontsource',
                     'oskfamily', 'osksource']
         writer = csv.DictWriter(outf, fieldnames = fieldnames)
         writer.writeheader()
@@ -51,28 +51,37 @@ badtags = {
     # langtags found in the data that are, for some reason, not going to work right without being tweaked slightly
     # alt method would be to do it based on keyboard?
     # there are others, but these are the ones with easy fixes for now. 
-    "yor":"yo",
-    "kau":"kr",
-    "ibo":"ig",
-    "hau":"ha",
 }
+
+exceptions = [
+    # sldr files that should NOT have any generated keyboard files added to them
+    "en.xml", "en_AU.xml", "es.xml", "el.xml"
+]
+
 
 if args.sldr:
     for lang, info in sorted(results.items()):
         try:
             lt = lookup(lang)
         except KeyError:
-            if lang in badtags.keys():
-                retrytag = badtags[lang]
-                try: 
-                    lt = lookup(retrytag)
-                except KeyError:
+            try:
+                lt = lookup(lang, use639=True)
+            except KeyError:
+                if lang in badtags.keys():
+                    retrytag = badtags[lang]
+                    try: 
+                        lt = lookup(retrytag, use639=True)
+                    except KeyError:
+                        print("Can't find {} with {}".format(lang, info[0]['id']))
+                        continue
+                else: 
                     print("Can't find {} with {}".format(lang, info[0]['id']))
                     continue
-            else: 
-                print("Can't find {} with {}".format(lang, info[0]['id']))
-                continue
         fname = lt.asSldr()
+        if fname in exceptions:
+            if not args.quiet:
+                print("Skipped {} because in 'exceptions'".format(fname))
+            continue
         fpath = os.path.join(args.sldr, fname)
         if not os.path.exists(fpath):
             fpath = os.path.join(args.sldr, fname[0].lower(), fname)
