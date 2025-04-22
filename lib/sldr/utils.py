@@ -25,8 +25,9 @@
 # SUCH DAMAGE.
 
 from langtag import langtag, lookup
-import os
+import os, json
 from sldr.ldml import Ldml, _alldrafts
+import requests
 
 
 def find_parents(langid, to_root = True, needs_sldr = False, match_script = True, match_region = False):    
@@ -216,3 +217,96 @@ def find_parents(langid, to_root = True, needs_sldr = False, match_script = True
         # root_tagset = LangTag. parent tagset based on arguments given
         # is_root = Bool. if true, means that the original langtag is the root file based on arguments given
         # parent_path = List. an ordered list of each applicable parent tag found, only potentially useful if to_root == True.
+
+#the next thing is emily playing around with trying to get keyboard info from keyman
+
+# def find_keymans(keymanspath):
+#     """ 
+#         Parameters:
+#             keymans = path to json file from the keyman api downloaded from https://api.keyman.com/cloud/4.0/keyboards/?languageidtype=bcp47
+#             The languageidtype set to "bcp47" is very important
+#     """
+#     apiurl = "https://api.keyman.com/cloud/4.0/keyboards/?languageidtype=bcp47"
+#     response = requests.get(apiurl)
+#     print(response.content)
+
+#     badtags = {
+#         # for tags that need to be swapped
+#     }
+
+#     dirname = os.path.dirname(__file__)
+#     if keymanspath:
+#         keymanspath == "../../../../SourceFiles/keyman2025/keyboards.json"
+#     keymanslocation = os.path.realpath(os.path.join(dirname, keymanspath))
+#     #alldat = json.load(open(keymanslocation))
+#     alldat = json.loads(response.content)
+#     print(alldat)
+#     dat = ""
+#     id = ""
+#     results = {}
+#     for a in alldat["keyboard"]:
+#         #this is now like we opened the file system and found all the different instances of keyboard info. every instance of "a" is an instance of keyboard info now
+#         dat = a
+#         id = a["id"]
+#         for k in dat['languages']:
+#             lang = k["id"]
+#             entry = {'langtag': lang, 'id': id}
+#             results.setdefault(lang, []).append(entry)
+#             for s in ('font', 'oskfont'):
+#                 if s in k.keys():
+#                     entry[s+'family'] = k[s]['family']
+#                     entry[s+'source'] = k[s]['source'][0]
+#     print(results)
+#     for tag in results.keys():
+#         try:
+#             lt = lookup(tag, use639=True)
+#         except KeyError:
+#             if tag in badtags.keys():
+#                 tag2 = badtags[tag]
+#                 try: 
+#                     lt = lookup(tag2)
+#                 except KeyError:
+#                     print("Can't find {} ...........................".format(tag))
+#                     continue
+#             else: 
+#                 print("Can't find {} ...........................".format(tag))
+#                 continue
+#         print(lt.asSldr())
+    
+#     #problem children: 
+#     # - as-Latn (sil_indic_roman, might actually be nag? no tag for as-Latn in langtags), 
+#     # - mul-Ethi (multiple ethiopic, sil_ethiopic, sil_ethiopic_power_g), 
+#     # - dgo-arab-pk (rac_dogri, there is a dgo-arab-in tag, is there a dif for pk?), 
+#     # - en-qp (english, northern africa = qp, region is left out of langtags intentionally)
+#     # - yor, (naijatype, "yor" is the 3 digit tag for "yo" in nigeria, which works bc it's nigerian language keyboard)
+#     # - kau, (also naijatype, actual tag is "kr")
+#     # - ibo, (same as above 2, actual tag is "ig")
+#     # - hau, (same as above 3, actual tag is "ha")
+#     # - xal-mong, (actually right? not sure why there's only a variant listed in langtags "xal-Mong-CN-x-todo")
+#     # - pes, (microlanguage that already is under fa, which already has the thingy listed. fa-AF however does not, should also have it)
+
+#     #elements needed for full setup:
+#     #-full langtag (requires identifying script) (problem: using keyboard info files did let us find actual langtag. this is gonna be trickier)
+#     #-font for identifying script? not every keyboard has an associated font
+#     #-id (for constructing keyboard link)
+#     #-keyboard link (NOT the github one in the api, requires construction. https://keyman.com/go/keyboard/id/download/kmp (CHECK AND MAKE SURE FILES AREN'T SAYING https://keyman.com/keyboards/install/id)
+#     #-type=kmp
+
+def fixsldr(sldr=None):
+    """rerun normalise on the whole sldr to remove thingies that shouldnt be there"""
+    dirname = os.path.dirname(__file__)
+    if sldr == None:
+        sldr = os.path.realpath(os.path.join(dirname, "../../../SLDR/sldr"))
+    for dp, dn, fn in os.walk(sldr):
+        for fname in fn:
+            print(fname)
+            fpath = os.path.join(sldr, fname)
+            if not os.path.exists(fpath):
+                fpath = os.path.join(sldr, fname[0].lower(), fname)
+                if not os.path.exists(fpath):
+                    print("Failed: {}".format(fname))
+                    continue
+            l = Ldml(fpath)
+            l.save_as(fpath)
+
+fixsldr()
