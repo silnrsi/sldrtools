@@ -8,6 +8,9 @@ import sldr.UnicodeSets as usets
 parser = argparse.ArgumentParser()
 parser.add_argument("indir",help="Root of SLDR file tree")
 parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
+parser.add_argument("-a","--allowmissing",action="store_true",help="Allow autonyms that contain characters missing from the main exemplar. Otherwise, autonyms that do not match exemplars will be skipped")
+parser.add_argument("-r","--report",action="store_true",help="Generates a report after process on skipped autonyms (and why)")
+parser.add_argument("-o","--overwrite",action="store_true",help="Replace existing autonyms with ones found in the Ethnologue. Otherwise, only empty autonym slots will be filled in")
 args = parser.parse_args()
 
 if args.ldml:
@@ -27,12 +30,18 @@ for f in allfiles:
     if tagset == "":
         print("No langtag for " + name)
         continue
+    r = str(name).find('-')
+    if r > 0:
+        lang = str(name)[:r]
+    else: 
+        lang = str(name)
     ename = getattr(tagset, "name", None)
     if ename is not None:
         nameel = l.ensure_path('localeDisplayNames/special/sil:names/sil:name[@xml:lang="en"]')[0]
         if nameel.text is None:
             nameel.text = ename
     lnames = getattr(tagset, "localnames", [getattr(tagset, 'localname', None)])
+    apostropheSwap=False
     if lnames != [None]:
         main = ""
         for e in l.findall('.//characters/exemplarCharacters'):
@@ -40,16 +49,59 @@ for f in allfiles:
             if t or not e.text: continue
             main = usets.parse(e.text, 'NFD')[0].asSet()
             break
-        for c in ("\uA78C", "\u02BC"):
+        for c in ("\uA78C", "\u02BC", "\u0027"):
             if c in main:
-                lnames = [s.replace("'", c) for s in lnames]
+                lnames = [s.replace("’", c) for s in lnames]
+                if c != "\u0027":
+                    lnames = [s.replace("'", c) for s in lnames]
+                # if U+A78C, U+02BC, or U+0027 is in the main exemplar, but the autonym has U+0027 or U+2019, 
+                # swap U+0027 or U+2019 in the autonym with that apostrophe in the exemplar 
+                # (unless U+0027 *IS* the apostrophe in the exemplar, in which case only swap out U+2019)
+                # goals to improve:
+                #   - ping something saying that a swap did happen using apsostropheSwap = True (currently tricky bc it overwrites lnames)
                 break
     lname = lnames[0]
+    missing = []
+    mismatch = False
+    apostMismatch = False
+    if not args.allowmissing:
+        for d in lname:
+            if d not in main:
+                # character in autonym missing from main exemplar
+                mismatch = True
+                if d in ("\u0027", "\u2019", "\uA78C", "\u02BC"):
+                    # note specifically that it's an apostrophe mismatch issue for different report if needed
+                    # this will only ping if the previous swap didn't work (i.e. there wasn't an apostrophe to swap with, or they use two different appropriate apostrophes)
+                    apostMismatch = True
+                #make list of all characters that are missing for report
+                missing.append(d)
+        if mismatch:
+            #now look for an alt that might match instead
+            n = 1
+            while len(lnames) > n:
+                altmissing = 0
+                for g in lnames[n]:
+                    if g not in main:
+                        # this currently just jumps ahead the second there's one inconsistency and doesn't record it in 'missing', change that to check whole thing for extra letters?
+                        n+=1
+                        altmissing += 1
+                        # try the next one
+                        break
+                if altmissing == 0:
+                    # ran through the whole autonym without issue, use this one
+                    lname = lnames[n]
+                    mismatch = False
+                    break
+        if mismatch:
+            # if the loop above never found a case where mismatch was swapped back to False, none of them match
+            lname = None
     if lname is not None:
-        nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(name))[0]
-        if nameel.text is None:
+        nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(lang))[0]
+        if nameel.text is None or args.overwrite:
+            # and then have it also swap out old stuff but only if the existing name isn't already in the list of lnames
             if nameel.text != lname and nameel.text not in lnames:
                 print("Name difference for {} has {}, changing to {}".format(name, nameel.text, lname))
-            nameel.text = lname
+                nameel.text = lname
     l.normalise()
     l.save_as(f)
+#still need to make a report of the exemplar-autonym mismatches 
