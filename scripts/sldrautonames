@@ -85,7 +85,7 @@ for f in allfiles:
                         # this currently just jumps ahead the second there's one inconsistency and doesn't record it in 'missing', change that to check whole thing for extra letters?
                         n+=1
                         altmissing += 1
-                        # try the next one
+                        # try the next alt autonym
                         break
                 if altmissing == 0:
                     # ran through the whole autonym without issue, use this one
@@ -99,6 +99,7 @@ for f in allfiles:
         nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(lang))[0]
         if nameel.text is None or args.overwrite:
             # and then have it also swap out old stuff but only if the existing name isn't already in the list of lnames
+            # could we check for that FIRST? If current name is in list of the ethnologue names and doesn't have character mismatch, just skip the rest of the code? speed things up?
             if nameel.text != lname and nameel.text not in lnames:
                 print("Name difference for {} has {}, changing to {}".format(name, nameel.text, lname))
                 nameel.text = lname
