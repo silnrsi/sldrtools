@@ -1,12 +1,6 @@
-from langtag import lookup
 from sldr.ldml import Ldml, iterate_files, draftratings
-from xml.etree import ElementTree as et
 import argparse, os
-import sldr.UnicodeSets as usets
 from datetime import date
-
-
-# IMPORTANT NOTE TO SELF: WHEN YOU RUN THIS TO TEST IT RUN IT IN A BRANCH IN CASE IT BREAKS ACTUAL SLDR LOL
 
 gendraft = draftratings.get('generated', 5)
 currentDate = date.today()
@@ -29,24 +23,27 @@ outdir = args.outpath
 if not os.path.exists(outdir):
     os.makedirs(outdir, exist_ok=True)  #if local doesnt exist make it
 
-skipMe = [
+exceptions = [
+    "root.xml",
+    "test.xml",
     "avu_Latn_SD.xml",
     "ku_Arab_TR",
     "lwo_Latn_ZA"
 ]
 
 for f in allfiles:
-    print(f)
     l = Ldml(f)
     fname = os.path.splitext(os.path.basename(f))[0]+".xml"
     silident = l.root.find(".//identity/special/sil:identity", {v:k for k,v in l.namespaces.items()})
-    if fname in skipMe:
+    if fname in exceptions:
+        ("skipped " + fname + " because it is listed in exceptions")
         continue
     if silident is None or silident.get("source", "") == "cldr" or silident.get("source", "") =="cldrseed":
         # source is cldr, skip
-        print("skipped " + fname + " since from cldr")
+        print("skipped " + fname + " because from cldr")
         continue
     if len(l.root) == 1 and l.root[0].tag == "identity":
+        ("skipped " + fname + " because it only contains id element")
         #only an id block, skip
         continue
 
@@ -56,7 +53,8 @@ for f in allfiles:
     version = l.root.find(".//identity/version")
     variant = l.root.find(".//identity/variant")
     if variant is not None:
-        # if it's a variant, skip
+        # if it's a variant, skip. this may change later
+        ("skipped " + fname + " because variant")
         continue
     for ident in identity:
         try:
@@ -75,6 +73,7 @@ for f in allfiles:
 
     characters = l.root.find(".//characters")
     if characters is None:
+        ("skipped " + fname + " because it has no character exemplars")
         continue
     specialchar = l.root.find(".//characters/special")
     if specialchar is not None:
@@ -95,7 +94,7 @@ for f in allfiles:
             if exemDraft >= gendraft:
                 characters.remove(chEl)
                 continue
-        l.change_draft(chEl, "unconfirmed")     #change to "provisional" if needed
+        l.change_draft(chEl, "provisional")     #change to "provisional" if needed
         # this should just leave us with the non-generated (unless otherwise stated) main, aux, index, numbers, and punctuation exemplars
         # unfortunately this doesn't seem to even recognize the lines with proposed-dbl in them, so that's handled later using write
     parseLenients = l.root.findall('characters/parseLenients')
@@ -103,9 +102,11 @@ for f in allfiles:
         characters.remove(pL)
     newCharacters = characters.findall('exemplarCharacters')
     if len(newCharacters) == 0:
+        ("skipped " + fname + " it has no non-generated character exemplars")
         continue
     if len(newCharacters) == 1:
         if newCharacters[0].get('type') == 'auxiliary':
+            ("skipped " + fname + " it has no non-generated character exemplars")
             continue
 
     finalElements = [identity, layout, characters]
@@ -113,7 +114,7 @@ for f in allfiles:
     for e in l.root:
         if e not in finalElements:
             # remove all other elements except for the ones we are keeping (and modified above)
-            # for some reason this doesn't get rid of special so i have a specific thing for that below
+            # for some reason this doesn't get rid of several things, so I have extra stuff that removes those things below >:P
             l.root.remove(e)
     
     rootspecial = l.root.find("special")
@@ -143,15 +144,13 @@ for f in allfiles:
     doctype = '<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">\n<!-- Copyright © 1991-{} Unicode, Inc.\nFor terms of use, see http://www.unicode.org/copyright.html\nSPDX-License-Identifier: Unicode-3.0\nCLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)\n-->\n'.format(currentYear)
     # doctype = '<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">\n'  # swap the comment with the line above if we decide not to add the copyright ourselves
 
-    deleteMe = ["<!-- Please enter language data in the fields below.  All data should be entered in English -->"]
-
     with open(outputName, 'r+', encoding="utf8") as f:
         lines = f.readlines()
         newlines = [x for x in lines if "<!-- Please enter language data in the fields below.  All data should be entered in English -->" not in x]
         newlines[1] = '<ldml>\n'
         newlines.insert(1,doctype)  
         newlines2 = [x for x in newlines if 'proposed-dbl' not in x]    # removes any lines that have the term 'proposed-dbl' in them
-        newlines3 = [x for x in newlines2 if '<!-- name.en' not in x]
+        newlines3 = [x for x in newlines2 if '<!-- name.en' not in x]   # there's almost certainly a nicer way of handling the multiple lines that need removing but for now this at least WORKS
         newlines4 = [x for x in newlines3 if "<!--  Enter the orientation attributes  -->" not in x]
         f.truncate(0)         
         f.seek(0)             
