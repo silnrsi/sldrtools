@@ -1,6 +1,7 @@
 from sldr.ldml import Ldml, iterate_files, draftratings
 import argparse, os
 from datetime import date
+import shutil
 
 gendraft = draftratings.get('generated', 5)
 currentDate = date.today()
@@ -11,6 +12,8 @@ parser.add_argument("indir",help="Root of SLDR file tree")
 parser.add_argument("-o","--outpath",help="Directory to store generated ldml files")
 parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
 parser.add_argument("-a","--allowgenerated",action="store_true",help="Includes lines with the 'generated' draft attribute")
+parser.add_argument("-c","--cldr",help="Location of a forked repo of the CLDR")
+parser.add_argument("-w","--writetoexemplars",action="store_true",help="Write directly to the exemplars folder of the fork of the CLDR")
 args = parser.parse_args()
 
 if args.ldml:
@@ -27,34 +30,54 @@ exceptions = [
     "root.xml",
     "test.xml",
     "avu_Latn_SD.xml",
-    "ku_Arab_TR",
-    "lwo_Latn_ZA"
+    "ku_Arab_TR.xml",
+    "lwo_Latn_ZA.xml",
+    "man_GN.xml",   #skipping bc not sure about its region code
 ]
+
+name_changes = {
+    # for things under different names in the exemplars folder for whatever reason
+    # name in sldr : [new name, Script Change Status, Region Change Status]
+    # Change Status refers to if a piece of tag information was added or removed from the file's name
+        # if nothing was changed, the status is 0
+        # if it was removed, the status is 1
+        # if it was added, the status is 2
+    "ky_CN.xml": ["ky_Arab.xml", 2, 1]
+}
 
 for f in allfiles:
     l = Ldml(f)
     fname = os.path.splitext(os.path.basename(f))[0]+".xml"
+    script = None
+    region = None
     silident = l.root.find(".//identity/special/sil:identity", {v:k for k,v in l.namespaces.items()})
     if fname in exceptions:
         ("skipped " + fname + " because it is listed in exceptions")
         continue
-    if silident is None or silident.get("source", "") == "cldr" or silident.get("source", "") =="cldrseed":
+    if silident is None:
+        print("skipped " + fname + " because it isn't in the sldr or is missing an sil identity element")
+        continue
+    if silident.get("source", "") == "cldr" or silident.get("source", "") =="cldrseed":
         # source is cldr, skip
         print("skipped " + fname + " because from cldr")
         continue
     if len(l.root) == 1 and l.root[0].tag == "identity":
-        ("skipped " + fname + " because it only contains id element")
+        print("skipped " + fname + " because it only contains id element")
         #only an id block, skip
         continue
+    region = silident.get("defaultRegion", None)
+    script = silident.get("script", None)
 
     identity = l.root.find(".//identity")
     specialident = l.root.find(".//identity/special")
     generated = l.root.find(".//identity/generation")
     version = l.root.find(".//identity/version")
     variant = l.root.find(".//identity/variant")
+    scriptident = l.root.find(".//identity/script")
+    regionident = l.root.find(".//identity/territory")
     if variant is not None:
         # if it's a variant, skip. this may change later
-        ("skipped " + fname + " because variant")
+        print("skipped " + fname + " because variant")
         continue
     for ident in identity:
         try:
@@ -69,11 +92,11 @@ for f in allfiles:
         # identity.remove(version)    # if you want to remove version
         version.set("number", "$Revision$")
 
-    layout = l.find(".//layout")
+    layout = l.root.find(".//layout")
 
     characters = l.root.find(".//characters")
     if characters is None:
-        ("skipped " + fname + " because it has no character exemplars")
+        print("skipped " + fname + " because it has no character exemplars")
         continue
     specialchar = l.root.find(".//characters/special")
     if specialchar is not None:
@@ -94,7 +117,7 @@ for f in allfiles:
             if exemDraft >= gendraft:
                 characters.remove(chEl)
                 continue
-        l.change_draft(chEl, "provisional")     #change to "provisional" if needed
+        l.change_draft(chEl, "unconfirmed")     #change to "provisional" if needed
         # this should just leave us with the non-generated (unless otherwise stated) main, aux, index, numbers, and punctuation exemplars
         # unfortunately this doesn't seem to even recognize the lines with proposed-dbl in them, so that's handled later using write
     parseLenients = l.root.findall('characters/parseLenients')
@@ -102,11 +125,11 @@ for f in allfiles:
         characters.remove(pL)
     newCharacters = characters.findall('exemplarCharacters')
     if len(newCharacters) == 0:
-        ("skipped " + fname + " it has no non-generated character exemplars")
+        print("skipped " + fname + " it has no non-generated character exemplars")
         continue
     if len(newCharacters) == 1:
         if newCharacters[0].get('type') == 'auxiliary':
-            ("skipped " + fname + " it has no non-generated character exemplars")
+            print("skipped " + fname + " it has no non-generated character exemplars")
             continue
 
     finalElements = [identity, layout, characters]
@@ -135,6 +158,24 @@ for f in allfiles:
 
     # now write it to file in the local folder
 
+    if fname in name_changes:
+        new_name = name_changes[fname][0]
+        scriptStatus = name_changes[fname][1]
+        regionStatus = name_changes[fname][2]
+        if scriptStatus == 1:
+            identity.remove(scriptident)
+        elif scriptStatus == 2:
+            l.ensure_path('identity/script[@type="{}"]'.format(script))[0]
+        if regionStatus == 1:
+            identity.remove(regionident)
+        elif regionStatus == 2:
+            l.ensure_path('identity/territory[@type="{}"]'.format(region))[0]
+        fname = new_name
+
+    #the next two lines ensure that the 'unconfirmed' draft attributes will always appear instead of vanishing
+    l.use_draft = 'generated'
+    l.default_draft = 'generated'
+
     outputName = os.path.join(outdir, fname)
     l.normalise()
     l.save_as(outputName)
@@ -142,11 +183,12 @@ for f in allfiles:
     # add doctype, remove the proposed-dbl stuff since apparently python thinks its invisible, and do other tweaks by manually writing to the file
 
     doctype = '<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">\n<!-- Copyright © 1991-{} Unicode, Inc.\nFor terms of use, see http://www.unicode.org/copyright.html\nSPDX-License-Identifier: Unicode-3.0\nCLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)\n-->\n'.format(currentYear)
-    # doctype = '<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">\n'  # swap the comment with the line above if we decide not to add the copyright ourselves
+    doctypeNoCopyright = '<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">\n'  
 
     with open(outputName, 'r+', encoding="utf8") as f:
         lines = f.readlines()
         newlines = [x for x in lines if "<!-- Please enter language data in the fields below.  All data should be entered in English -->" not in x]
+        newlines[0] = '<?xml version="1.0" encoding="UTF-8" ?>\n'
         newlines[1] = '<ldml>\n'
         newlines.insert(1,doctype)  
         newlines2 = [x for x in newlines if 'proposed-dbl' not in x]    # removes any lines that have the term 'proposed-dbl' in them
@@ -156,7 +198,84 @@ for f in allfiles:
         f.seek(0)             
         f.writelines(newlines4)   
 
-    print("processed " + outputName)
+    if args.writetoexemplars:
+        cldr = args.cldr
+        exemplarsFolder = os.path.join(cldr,"exemplars\main")
+        exemplarEquivalent = os.path.join(exemplarsFolder, fname)
+        if os.path.exists(exemplarEquivalent):
+            exemplarFile = Ldml(exemplarEquivalent)
+            newIdentity, newLayout, newCharacters = finalElements
+
+            # the following code is based on what we use in the dbl import
+            
+            for i in newIdentity:
+                elementName = i.tag
+                elementAttribList = i.attrib
+                elementAttrib = list(elementAttribList)[0]
+                elementAttribValue = elementAttribList[elementAttrib]
+                xpath = 'identity/' + elementName + '[@' + elementAttrib + '="' + elementAttribValue + '"]'
+                exemplarFile.ensure_path(xpath)[0]
+            if newLayout is not None:
+                orientation = newLayout._children[0]
+                for o in orientation:
+                    elementName = o.tag
+                    xpath = 'layout/orientation/' + elementName
+                    orientationElem = exemplarFile.ensure_path(xpath)[0]
+                    orientationElem.text = o.text
+            for t in ('auxiliary', 'main', 'index', 'numbers', 'punctuation'):     
+                if t == 'main':
+                    key = ''
+                    newValue = newCharacters.find('.//exemplarCharacters')
+                else:
+                    key = t
+                    newValue = newCharacters.find('.//exemplarCharacters[@type="' + key + '"]')
+                xpath = 'characters/exemplarCharacters[@type="' + key + '"]'
+                if newValue is not None:
+                    chElem = exemplarFile.ensure_path(xpath)[0]
+                    chElem.text = newValue.text
+                    exemplarFile.change_draft(chElem, "unconfirmed")    
+            
+            #the next two lines ensure that the 'unconfirmed' draft attributes will always appear instead of vanishing
+            exemplarFile.use_draft = 'generated'
+            exemplarFile.default_draft = 'generated'
+
+            exemplarFile.normalise()
+            exemplarFile.save_as(exemplarEquivalent)
+
+            with open(exemplarEquivalent, 'r+', encoding="utf8") as f:
+                lines = f.readlines()
+                newlines = [x for x in lines]
+                newlines[0] = '<?xml version="1.0" encoding="UTF-8" ?>\n'
+                newlines[6] = '<ldml>\n'
+                newlines.insert(1,doctypeNoCopyright)  
+                f.truncate(0)         
+                f.seek(0)             
+                f.writelines(newlines)   
+
+        else:
+            cldrFile = os.path.join(cldr, "common\main", fname)
+            if os.path.exists(cldrFile):
+                print("skipped " + fname + " because it is already in CLDR AND ISN'T MARKED AS SUCH IN SLDR")
+                continue
+            r = str(fname).find('_')
+            if r > 0:
+                lang = str(fname)[:r]
+            else: 
+                lang = str(fname)
+            parentFile = str(lang) + '.xml'
+            exemplarParent = os.path.join(exemplarsFolder, parentFile)
+            cldrParent = os.path.join(cldr, "common\main", parentFile)
+            sldrParent = os.path.join(args.indir, parentFile[0], parentFile)
+            print(sldrParent)
+            if os.path.exists(sldrParent) or os.path.exists(cldrParent) or os.path.exists(exemplarParent):
+                print("hello!!!!")
+                #shutil.copy(outputName, exemplarEquivalent)
+            else:
+                print("skipped " + fname + " because there is no parent (" + parentFile +") in the CLDR or exemplars/main, nor is one being added to exemplars/main through this process")
+            
+
+    print("processed " + fname)
+
 
         
 
