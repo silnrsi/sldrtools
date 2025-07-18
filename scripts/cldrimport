@@ -36,7 +36,7 @@ from langtag import lookup
 from multiprocessing import Pool
 
 parser = ArgumentParser(description=__doc__)
-parser.add_argument('indir', help='cldr common directory (path/cldr/common, or path/cldr/seed)')
+parser.add_argument('indir', help='cldr common directory (path/cldr/common, or path/cldr/seed)')    #seed is depricated, replaced with cldr/exemplars/main
 parser.add_argument('outdir', help='Directory to store results in')
 parser.add_argument('-s','--single',action='store_true', help='Turn off multiprocessing')
 parser.add_argument('--seed',action='store_true',help='Pulling from CLDR seed')

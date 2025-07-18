@@ -24,7 +24,7 @@ else:
 outdir = args.outpath
 
 if not os.path.exists(outdir):
-    os.makedirs(outdir, exist_ok=True)  #if local doesnt exist make it
+    os.makedirs(outdir, exist_ok=True)  #if local doesnt exist, make it
 
 exceptions = [
     "root.xml",
@@ -255,7 +255,7 @@ for f in allfiles:
         else:
             cldrFile = os.path.join(cldr, "common\main", fname)
             if os.path.exists(cldrFile):
-                print("skipped " + fname + " because it is already in CLDR AND ISN'T MARKED AS SUCH IN SLDR")
+                print("skipped " + fname + " because it is already in the CLDR, but wasn't marked as such in the SLDR, most likely added to CLDR since the last run of 'cldrimport'")
                 continue
             r = str(fname).find('_')
             if r > 0:
@@ -268,12 +268,10 @@ for f in allfiles:
             sldrParent = os.path.join(args.indir, parentFile[0], parentFile)
             print(sldrParent)
             if os.path.exists(sldrParent) or os.path.exists(cldrParent) or os.path.exists(exemplarParent):
-                print("hello!!!!")
-                #shutil.copy(outputName, exemplarEquivalent)
+                shutil.copy(outputName, exemplarEquivalent)
             else:
                 print("skipped " + fname + " because there is no parent (" + parentFile +") in the CLDR or exemplars/main, nor is one being added to exemplars/main through this process")
             
-
     print("processed " + fname)
 
 
