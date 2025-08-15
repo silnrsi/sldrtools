@@ -32,7 +32,7 @@ exceptions = [
     "avu_Latn_SD.xml",
     "ku_Arab_TR.xml",
     "lwo_Latn_ZA.xml",
-    "man_GN.xml",   #skipping bc not sure about its region code
+    "man_Latn_GN.xml",   #skipping bc not sure about its region code
 ]
 
 name_changes = {
