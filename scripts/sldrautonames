@@ -24,6 +24,27 @@ def checkAutonym(lname, main, missing):
     mismatch = re.match(mainre, autonym_text) is None
     return (mismatch, apostMismatch)
 
+def apostCleanup(names, main):
+    for c in ("\uA78C", "\u02BC", "\u0027"):
+        for d in main:   # to handle multigraphs
+            if c in d:
+                if isinstance(names, str):
+                    names = names.replace("’", c)
+                elif isinstance(names, list):
+                    names = [s.replace("’", c) for s in names]
+                if c != "\u0027":
+                    if isinstance(names, str):
+                        names = names.replace("'", c)
+                    elif isinstance(names, list):
+                        names = [s.replace("'", c) for s in names]
+                # if U+A78C, U+02BC, or U+0027 is in the main exemplar, but the autonym has U+0027 or U+2019, 
+                # swap U+0027 or U+2019 in the autonym with that apostrophe in the exemplar 
+                # (unless U+0027 *IS* the apostrophe in the exemplar, in which case only swap out U+2019)
+                # goals to improve:
+                #   - ping something saying that a swap did happen using apsostropheSwap = True (currently tricky bc it overwrites lnames)
+                break
+    return names
+
 parser = argparse.ArgumentParser()
 parser.add_argument("indir",help="Root of SLDR file tree")
 parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
@@ -58,19 +79,19 @@ for f in allfiles:
         lang = str(name)[:r]
     else: 
         lang = str(name)
-    # if not args.overwrite:
-    #     nameel = l.root.find('localeDisplayNames/languages/language[@type="{}"]'.format(lang))
-    #     if nameel is not None:
-    #         continue
-    # commenting out bc i might want data without overwriting
+    if not args.overwrite:
+        nameel = l.root.find('localeDisplayNames/languages/language[@type="{}"]'.format(lang))
+        if nameel is not None:
+            continue
     ename = getattr(tagset, "name", None)
     if ename is not None:
         nameel = l.ensure_path('localeDisplayNames/special/sil:names/sil:name[@xml:lang="en"]')[0]
         if nameel.text is None:
             nameel.text = ename
-    lnames = getattr(tagset, "localnames", [getattr(tagset, 'localname', None)])
+    lnames = getattr(tagset, "localnames", [None])
     if lnames == [None]:
         continue
+    lnames = [unicodedata.normalize("NFC", s) for s in lnames]
     oldlnames = lnames  # way of hanging onto old version for compare? 
     apostropheSwap=False
     if lnames != [None]:
@@ -80,23 +101,22 @@ for f in allfiles:
             if t or not e.text or len(e.text) <= 2: continue
             main = usets.parse(e.text, 'NFD')[0].asSet()
             break
-        for c in ("\uA78C", "\u02BC", "\u0027"):
-            if c in main:
-                lnames = [s.replace("’", c) for s in lnames]
-                if c != "\u0027":
-                    lnames = [s.replace("'", c) for s in lnames]
-                # if U+A78C, U+02BC, or U+0027 is in the main exemplar, but the autonym has U+0027 or U+2019, 
-                # swap U+0027 or U+2019 in the autonym with that apostrophe in the exemplar 
-                # (unless U+0027 *IS* the apostrophe in the exemplar, in which case only swap out U+2019)
-                # goals to improve:
-                #   - ping something saying that a swap did happen using apsostropheSwap = True (currently tricky bc it overwrites lnames)
-                break
+        lnames = apostCleanup(lnames, main)
+        if main == "":
+            continue
+    #this section cleans up any issues with the current autonym (NFC, apostrophe inconsistency) so that if we picked a specific autonym from the list for a reason, it still reads as matching and doesn't get swapped
+    #it also will put the cleaned-up version back into the file even if no other changes are made. 
+    nameel = l.root.find('localeDisplayNames/languages/language[@type="{}"]'.format(lang))
+    if nameel is not None:
+        currName = nameel.text
+        currName = apostCleanup(currName, main)
+        nameel.text = unicodedata.normalize("NFC", currName)    
+    
     n = 1
     while len(lnames) > n:
         if lnames[n-1] != oldlnames[n-1]:
             apostropheSwap = True
         n+=1
-
     lname = lnames[0]
     missing = []
     missingCode = []
@@ -124,16 +144,18 @@ for f in allfiles:
             # if the loop above never found a case where mismatch was swapped back to False, none of them match
             lname = None
     if lname is not None:
-        nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(lang))[0]
-        if nameel.text is None or args.overwrite:
+        if currName is None or args.overwrite:
             # and then have it also swap out old stuff but only if the existing name isn't already in the list of lnames
             # could we check for that FIRST? If current name is in list of the ethnologue names and doesn't have character mismatch, just skip the rest of the code? speed things up?
-            if nameel.text != lname and nameel.text not in lnames:
+            nameel = l.ensure_path('localeDisplayNames/languages/language[@type="{}"]'.format(lang))[0]
+            if currName != lname and currName not in lnames:
                 print("Autonym for {} was {}, changing to {}".format(name, nameel.text, lname))
                 if apostropheSwap:
                     print("Apostrophe was swapped from the Ethnologue version") # not perfect for now
                 nameel.text = lname
     elif args.report:
+        if "\u0020" in missing:
+            missing.remove("\u0020")
         for m in list(set(missing)):
             missingCode.append("U+" + format(ord(m), '04x'))
         report[fname] = (list(set(missing)), missingCode, lnames, apostropheSwap)
@@ -144,5 +166,6 @@ for f in allfiles:
 if args.report:
     print("note, some of the characters listed below aren't truly missing, its just a quirk of the code, blegh")
     print("filename: list of characters in ethnologue autonyms that are not in main exemplars, list of those characters' codepoints, list of ethnologue autonyms, whether an apostrophe was also swapped")
-    print(report)
+    for a in report.items():
+        print(a)
     # add function from autonym test to report codepoints lol
