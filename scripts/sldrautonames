@@ -107,6 +107,7 @@ for f in allfiles:
     #this section cleans up any issues with the current autonym (NFC, apostrophe inconsistency) so that if we picked a specific autonym from the list for a reason, it still reads as matching and doesn't get swapped
     #it also will put the cleaned-up version back into the file even if no other changes are made. 
     nameel = l.root.find('localeDisplayNames/languages/language[@type="{}"]'.format(lang))
+    currName = None
     if nameel is not None:
         currName = nameel.text
         currName = apostCleanup(currName, main)
@@ -153,6 +154,7 @@ for f in allfiles:
                 if apostropheSwap:
                     print("Apostrophe was swapped from the Ethnologue version") # not perfect for now
                 nameel.text = lname
+                print(nameel.text)
     elif args.report:
         if "\u0020" in missing:
             missing.remove("\u0020")
@@ -164,8 +166,13 @@ for f in allfiles:
     l.save_as(f)
 #still need to make a report of the exemplar-autonym mismatches 
 if args.report:
-    print("note, some of the characters listed below aren't truly missing, its just a quirk of the code, blegh")
+    print("note, some of the characters listed below aren't truly missing, it's just a quirk of the code, blegh")
     print("filename: list of characters in ethnologue autonyms that are not in main exemplars, list of those characters' codepoints, list of ethnologue autonyms, whether an apostrophe was also swapped")
     for a in report.items():
         print(a)
     # add function from autonym test to report codepoints lol
+
+    #add optional arg with function to report specifically the things we need to report to eth. not going to be easy bc thats kinda subjective. hmm
+
+
+    # run with :/mnt/c/Users/emily_roth/Documents/GitHub/SLDRTools$ python3 scripts/sldrautonames ../SLDR/sldr -r -o
