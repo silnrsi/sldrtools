@@ -281,6 +281,14 @@ class UCDTests(unittest.TestCase):
         text = u'\U00016d69\U00016d68'
         self.assertEqual(u'\U00016d63\U00016d67\U00016d67\U00016d67', self.ucd.normalize('NFD', text))
 
+    def ignore_nfc_tus17(self):
+        text = u'\u0061\u0315\u0300\u05AE\U0001E6E3\u0062'
+        self.assertEqual(u'\u00E0\u05AE\U0001E6E3\u0315\u0062', self.ucd.normalize('NFC', text))
+
+    def ignore_nfd_tus17(self):
+        text = u'\u0061\u0315\u0300\u05AE\U0001E6E3\u0062'
+        self.assertEqual(u'\u0061\u05AE\u0300\U0001E6E3\u0315\u0062', self.ucd.normalize('NFD', text))
+
 
 class ExemplarsTests(unittest.TestCase):
 
