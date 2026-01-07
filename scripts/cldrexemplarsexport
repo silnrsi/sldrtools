@@ -12,7 +12,7 @@ parser.add_argument("indir",help="Root of SLDR file tree")
 parser.add_argument("-o","--outpath",help="Directory to store generated ldml files")
 parser.add_argument("-l","--ldml",help="ldml file identifier (without .xml)")
 parser.add_argument("-a","--allowgenerated",action="store_true",help="Includes lines with the 'generated' draft attribute")
-parser.add_argument("-c","--cldr",help="Location of a forked repo of the CLDR")
+parser.add_argument("-r","--cldr",help="Location of a forked repo of the CLDR")
 parser.add_argument("-w","--writetoexemplars",action="store_true",help="Write directly to the exemplars folder of the fork of the CLDR")
 args = parser.parse_args()
 
