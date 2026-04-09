@@ -76,11 +76,10 @@ mainfontgroups = {
     "Cyrl": ["Charis", "Gentium", "Andika"]
 }
 
-lowerfontgroups = {
+lowestfontgroups = {
     # fonts that should also always appear, but should be lower tier than the ones listed in 'mainfontgroups'
     # these are often non-sil fonts 
-    # for now, these should be without the default tag at all, 
-    # but in future, might get default tag with a specific, bigger number to indicate lower priority
+    # these should be without the default tag at all (implied default=100)
     "Latn": ["Noto Sans", "Noto Serif"],
     "Cyrl": ["Noto Sans", "Noto Serif"]
 }
@@ -143,21 +142,47 @@ def processOneFile(fname, sldrPath):
             if neededfonts is not None:
                 for font in neededfonts:
                     if font in fontList.keys():
-                        neededfeature = fontList[font][1]
+                        if font == "Andika":
+                            #need to make this gentium/charis friendly
+                            neededfeature = fontList[font][1]
+                            for feature in ["ss01=1", "ss13=1", "ss14=1"]:
+                                if feature in neededfeature:
+                                    editedfeature = neededfeature.replace(feature, "")
+                                    neededfeature = editedfeature
+                            if len(neededfeature) == 0:
+                                neededfeature = None
+                        else:
+                            neededfeature = fontList[font][1]
                             #note: this will fall apart if multiple fonts are listed with different features, but that's not supposed to happen anyway?
                         
                         #this bit is in case multiple of these fonts are already in there, need to add the new priority
                         currentpriority = fontList[font][0].get("types")
-                        if currentpriority is None and priority is not None:
+                        if currentpriority is None and priority==2 and len(fontList)==1:
+                            # if only one font is listed in the current file, but doesn't have a priority listed, 
+                            # but IS in the list of the main fonts (aka we are running this with the priority==2 arg)
+                            # make it the main default
+                            fontList[font][0].set("types", "default")
+                            # this doesn't handle if multiple fonts are listed with no priorities. 
+                            # In theory, it would make all of them default=2. which isn't bad bc there would be no normal default, so basicaly all of them are highest priority
+                            # but should i make it so that if NOTHING has a default tag, give all of them a default before filling in blanks?
+                        elif currentpriority is None and priority is not None:
                             fontList[font][0].set("types", "default={}".format(priority))
                             # this is not equiped to handle multiple different priorities for different roles. 
                             # it overrides the type rather than adds to the value inside it
-                            # if new roles get added, this whole function will need to be made smart enough to handle that
+                            # if new roles get added, this whole 'add missing fonts' function will need to be made smart enough to handle that
                             # maybe add argument for the role (i.e. default, ui, etc) 
                             # and when asking for currentpriority, actually read the text instead of just looking for if it exists
                             # and determine if that SPECIFIC ROLE is present in text, and go from there
                         pass
                     else:
+                        if font == "Andika" and neededfeature is not None:
+                            # make font features from charis/gentium friendly for andika
+                            for feature in ["ss01=1", "ss11=1", "ss12=1"]:
+                                if feature in neededfeature:
+                                    editedfeature = neededfeature.replace(feature, "")
+                                    neededfeature = editedfeature
+                            if len(neededfeature) == 0:
+                                neededfeature = None
                         if priority is not None and neededfeature is not None: 
                             newfont = ldml.ensure_path('special/sil:external-resources/sil:font[@name="{}"][@types="default={}"][@features="{}"]'.format(font, priority, neededfeature))[0]
                         elif neededfeature is not None:
@@ -173,8 +198,7 @@ def processOneFile(fname, sldrPath):
                         #and we've added it to the font list we made earlier just in case (currently not necessary but again, just in case)
 
     _addMissingFonts(mainfontgroups, 2)
-    _addMissingFonts(lowerfontgroups)
-        # if we decide to give these fonts a specific priority instead of no default tag at all, add number to function arguments
+    _addMissingFonts(lowestfontgroups)
 
     ldml.normalise()
     ldml.save_as(fpath)
