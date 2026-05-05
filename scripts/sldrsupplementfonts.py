@@ -93,6 +93,7 @@ def processOneFile(fname, sldrPath):
     fonts = None
 
     fpath = os.path.join(sldrPath, fname[0], fname)
+    print(fname)
     ldml = Ldml(fpath)
     # we have ldml file
 
@@ -103,11 +104,13 @@ def processOneFile(fname, sldrPath):
     elif i is not None:
         script = i.get("script")
         
-
+    if script not in lowestfontgroups.keys():
+        return
     # we have script of file
 
     fonts =  ldml.root.findall('special/sil:external-resources/sil:font', {v:k for k,v in ldml.namespaces.items()})
-
+    if len(fonts) == 0:
+        return
     #we have fonts of file
 
     def _addLink(font, fontElem):
@@ -145,12 +148,13 @@ def processOneFile(fname, sldrPath):
                         if font == "Andika":
                             #need to make this gentium/charis friendly
                             neededfeature = fontList[font][1]
-                            for feature in ["ss01=1", "ss13=1", "ss14=1"]:
-                                if feature in neededfeature:
-                                    editedfeature = neededfeature.replace(feature, "")
-                                    neededfeature = editedfeature
-                            if len(neededfeature) == 0:
-                                neededfeature = None
+                            if neededfeature is not None:
+                                for feature in ["ss01=1", "ss13=1", "ss14=1"]:
+                                    if feature in neededfeature:
+                                        editedfeature = neededfeature.replace(feature, "")
+                                        neededfeature = editedfeature
+                                if len(neededfeature) == 0:
+                                    neededfeature = None
                         else:
                             neededfeature = fontList[font][1]
                             #note: this will fall apart if multiple fonts are listed with different features, but that's not supposed to happen anyway?
@@ -212,10 +216,10 @@ def processOneFile(fname, sldrPath):
         f.truncate()
         for line in lines:
             oldline = line
-            if "Noto Sans" in line:
+            if 'Noto Sans' in line:
                 line = line + '\t\t\t\t<!--types="ui"-->\n'
             if '<!--types="ui"-->' in oldline:
-                line = line.replace('\t\t\t\t<!--types="ui"-->\n', " ")
+                line = line.replace('\t\t\t\t<!--types="ui"-->\n', "")
             f.write(line)
     
 
